@@ -1,5 +1,5 @@
 // ============================================================
-// CONVO MESSENGER - UTILITY FUNCTIONS
+// CONVO MESSENGER - UTILITY FUNCTIONS (JSONP VERSION)
 // ============================================================
 
 /**
@@ -153,14 +153,58 @@ function autoResize(el) {
 }
 
 /**
- * API call wrapper
+ * API call using JSONP (bypasses CORS completely)
  */
-async function apiCall(params) {
-  const url = new URL(STATE.scriptUrl);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+function apiCall(params) {
+  return new Promise((resolve, reject) => {
+    // Create unique callback name
+    const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    
+    // Build URL with parameters
+    const urlParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      urlParams.append(key, String(value));
+    }
+    urlParams.append('callback', callbackName);
+    
+    const url = STATE.scriptUrl + '?' + urlParams.toString();
+    
+    console.log('JSONP Call:', params.action, url);
+    
+    // Create script tag
+    const script = document.createElement('script');
+    script.src = url;
+    
+    // Set timeout (10 seconds)
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Request timeout'));
+    }, 10000);
+    
+    // Cleanup function
+    const cleanup = () => {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    
+    // Define callback
+    window[callbackName] = (result) => {
+      console.log('JSONP Response:', result);
+      cleanup();
+      resolve(result);
+    };
+    
+    // Handle errors
+    script.onerror = () => {
+      console.error('JSONP Script Error');
+      cleanup();
+      reject(new Error('Network error'));
+    };
+    
+    // Append to document
+    document.head.appendChild(script);
+  });
 }
 
-console.log('✅ Convo Utils Loaded');
+console.log('✅ Convo Utils Loaded (JSONP Mode)');
