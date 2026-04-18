@@ -247,11 +247,42 @@
   <div id="toastContainer" class="toast-container"></div>
   
   <!-- ======================================== -->
-  <!-- JAVASCRIPT                               -->
+  <!-- JAVASCRIPT - ORDER MATTERS               -->
   <!-- ======================================== -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/chat.js"></script>
+  
+  <!-- Initialize app after all scripts loaded -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ DOM Loaded - Initializing ncrypt');
+      
+      // Check if functions exist
+      if (typeof showToast !== 'function') {
+        console.error('❌ showToast not found! Check utils.js loading');
+      } else {
+        console.log('✅ showToast loaded');
+      }
+      
+      if (typeof callAPI !== 'function') {
+        console.error('❌ callAPI not found! Check utils.js loading');
+      } else {
+        console.log('✅ callAPI loaded');
+      }
+      
+      // Setup auth and start
+      if (typeof setupAuthListeners === 'function') {
+        setupAuthListeners();
+        console.log('✅ Auth listeners setup');
+      }
+      
+      if (typeof initAuth === 'function') {
+        initAuth();
+        console.log('✅ Auth initialized');
+      }
+    });
+  </script>
 </body>
 </html>

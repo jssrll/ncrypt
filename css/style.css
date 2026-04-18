@@ -909,6 +909,7 @@ body {
   gap: 12px;
   animation: slideIn 0.3s ease;
   min-width: 280px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .toast.error {
