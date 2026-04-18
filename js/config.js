@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // Google Apps Script Web App URL
-  API_URL: 'https://script.google.com/macros/s/AKfycbzY3OWC6kNIGHQS40qAoqJqhvNR9Uk2QD0B8F3qTyRF-Jtb5hEKqku6csXVfCYRaiY/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbw-fSy5pskB4nQ0jALJ0bCes6sYngWU4kWpqxj1UMouUn7xV14C4qQYxtVVPHARJ6k7/exec',
   
   // Auto-refresh interval (30 seconds)
   REFRESH_INTERVAL: 30000,
