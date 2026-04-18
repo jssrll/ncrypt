@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // Default Apps Script URL (user will set their own)
-  DEFAULT_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwoV8BYzT8SGD469HD32bxY0r5YqTnBKdlRkXk2LsFc4yemBcdg5kVqc9MVNMhFkOr6/exec',
+  DEFAULT_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxDTFYSgopQ3IxLT8voOziTyYxcTponqnd1x8uEQD7g3CMNNnap2F1DzJRElSPVkvik/exec',
   
   // Polling interval (5 seconds)
   POLL_INTERVAL: 5000,
