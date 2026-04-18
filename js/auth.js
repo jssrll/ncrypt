@@ -147,6 +147,8 @@ async function handleLogin() {
   const email = emailInput?.value.trim() || '';
   const password = passwordInput?.value || '';
   
+  console.log('Login form data:', { email });
+  
   if (!email || !password) {
     showToast('Please enter email and password', 'error');
     return;
@@ -158,12 +160,15 @@ async function handleLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Signing in...';
   
-  console.log('Attempting login:', { email });
+  console.log('Calling API login with:', { email });
   
   try {
-    const result = await callAPI('login', { email, password });
+    const result = await callAPI('login', { 
+      email: email, 
+      password: password 
+    });
     
-    console.log('Login result:', result);
+    console.log('Login API result:', result);
     
     if (result.success) {
       currentSession = result.sessionToken;
@@ -202,6 +207,8 @@ async function handleRegister() {
   const password = passwordInput?.value || '';
   const confirm = confirmInput?.value || '';
   
+  console.log('Register form data:', { fullName, email, password: password ? '***' : '' });
+  
   if (!fullName || !email || !password || !confirm) {
     showToast('All fields are required', 'error');
     return;
@@ -223,12 +230,16 @@ async function handleRegister() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Creating account...';
   
-  console.log('Attempting registration:', { fullName, email });
+  console.log('Calling API register with:', { fullName, email });
   
   try {
-    const result = await callAPI('register', { fullName, email, password });
+    const result = await callAPI('register', { 
+      fullName: fullName, 
+      email: email, 
+      password: password 
+    });
     
-    console.log('Registration result:', result);
+    console.log('Register API result:', result);
     
     if (result.success) {
       showToast(`Account created! Your ID: ${result.userId}`, 'success');
@@ -248,7 +259,7 @@ async function handleRegister() {
       passwordInput.value = '';
       confirmInput.value = '';
       
-      // Re-enable button for next time
+      // Re-enable button
       btn.disabled = false;
       btn.innerHTML = originalText;
     } else {

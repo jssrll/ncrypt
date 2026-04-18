@@ -84,31 +84,41 @@ function formatMessageTime(timestamp) {
  * Generate random avatar color based on string
  */
 function getAvatarColor(str) {
+  if (!str) return '#0f172a';
   let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const strValue = String(str);
+  for (let i = 0; i < strValue.length; i++) {
+    hash = strValue.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
   return `hsl(${hue}, 70%, 45%)`;
 }
 
 /**
- * API Call wrapper
+ * API Call wrapper - FIXED VERSION
  */
 async function callAPI(action, data = {}) {
   try {
-    const params = new URLSearchParams({ action, ...data });
-    const url = `${CONFIG.API_URL}?${params.toString()}`;
+    // Build URL with parameters
+    const urlParams = new URLSearchParams();
+    urlParams.append('action', action);
+    
+    // Add all data parameters
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null) {
+        urlParams.append(key, String(value));
+      }
+    }
+    
+    const url = `${CONFIG.API_URL}?${urlParams.toString()}`;
     
     console.log('API Call:', action, data);
+    console.log('Full URL:', url);
     
     const response = await fetch(url, {
       method: 'GET',
       mode: 'cors',
-      credentials: 'omit',
-      headers: {
-        'Accept': 'application/json'
-      }
+      credentials: 'omit'
     });
     
     const text = await response.text();
@@ -146,4 +156,4 @@ function debounce(func, wait) {
   };
 }
 
-console.log('✅ ncrypt Utils Loaded - showToast available:', typeof showToast);
+console.log('✅ ncrypt Utils Loaded');
