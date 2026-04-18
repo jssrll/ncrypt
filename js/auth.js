@@ -9,315 +9,169 @@ let currentUser = null;
 // INITIALIZATION
 // ========================================
 
-function initAuth() {
-  const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
-  const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
+async function initAuth() {
+  const stored = localStorage.getItem(STORAGE_KEYS.USER);
+  const storedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
   
-  if (savedSession && savedUser) {
+  if (stored && storedSession) {
     try {
-      currentSession = savedSession;
-      currentUser = JSON.parse(savedUser);
-      showApp();
-    } catch (e) {
-      clearSession();
-      showAuth();
+      window.currentUser = JSON.parse(stored);
+      currentUser = window.currentUser;
+      currentSession = storedSession;
+      document.getElementById('authContainer').style.display = 'none';
+      document.getElementById('appContainer').style.display = 'flex';
+      updateUserUI();
+      if (typeof initChat === 'function') initChat();
+    } catch(e) { 
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
     }
-  } else {
-    showAuth();
   }
 }
 
-function showAuth() {
-  document.getElementById('authContainer').style.display = 'flex';
-  document.getElementById('appContainer').style.display = 'none';
-}
+function setupAuthListeners() {
+  // Login button
+  document.getElementById('loginBtn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const btn = e.target;
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) { 
+      showToast('Please enter email and password', true); 
+      return; 
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true; 
+    btn.innerHTML = '<span class="spinner"></span> Signing in...';
+    
+    const result = await callAPI('login', { email, password });
+    
+    btn.disabled = false; 
+    btn.innerHTML = originalText;
+    
+    if (result.success) {
+      window.currentUser = result.user;
+      currentUser = result.user;
+      currentSession = result.sessionToken;
+      
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
+      localStorage.setItem(STORAGE_KEYS.SESSION, currentSession);
+      
+      document.getElementById('authContainer').style.display = 'none';
+      document.getElementById('appContainer').style.display = 'flex';
+      
+      updateUserUI();
+      if (typeof initChat === 'function') initChat();
+      
+      showToast(`Welcome, ${currentUser.fullName}!`, false);
+      
+      // Clear form
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+    } else { 
+      showToast(result.error || 'Invalid credentials', true); 
+    }
+  });
 
-function showApp() {
-  document.getElementById('authContainer').style.display = 'none';
-  document.getElementById('appContainer').style.display = 'flex';
-  
-  // Update UI with user info
-  updateUserUI();
-  
-  // Initialize chat
-  if (typeof initChat === 'function') {
-    initChat();
-  }
-}
+  // Register button
+  document.getElementById('registerBtn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const btn = e.target;
+    const fullName = document.getElementById('regFullName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirmPassword').value;
+    
+    if (!fullName || !email || !password) { 
+      showToast('All fields required', true); 
+      return; 
+    }
+    if (password !== confirm) { 
+      showToast("Passwords don't match", true); 
+      return; 
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true; 
+    btn.innerHTML = '<span class="spinner"></span> Registering...';
+    
+    const result = await callAPI('register', { fullName, email, password });
+    
+    btn.disabled = false; 
+    btn.innerHTML = originalText;
+    
+    if (result.success) {
+      showToast(`Registration successful! Your ID: ${result.userId}`, false);
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('loginEmail').value = email;
+      
+      // Clear form
+      document.getElementById('regFullName').value = '';
+      document.getElementById('regEmail').value = '';
+      document.getElementById('regPassword').value = '';
+      document.getElementById('regConfirmPassword').value = '';
+    } else { 
+      showToast(result.error || 'Registration failed', true); 
+    }
+  });
 
-function clearSession() {
-  localStorage.removeItem(STORAGE_KEYS.SESSION);
-  localStorage.removeItem(STORAGE_KEYS.USER);
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_CONVERSATION);
-  currentSession = null;
-  currentUser = null;
+  // Logout button
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    if (currentSession) {
+      await callAPI('logout', { sessionToken: currentSession });
+    }
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.SESSION);
+    window.currentUser = null;
+    currentUser = null;
+    currentSession = null;
+    
+    document.getElementById('authContainer').style.display = 'flex';
+    document.getElementById('appContainer').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+    
+    showToast('Logged out', false);
+  });
+
+  // Switch forms
+  document.getElementById('showRegisterLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+  });
+
+  document.getElementById('showLoginLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+  });
 }
 
 function updateUserUI() {
   if (!currentUser) return;
   
-  // Sidebar
-  const sidebarUserName = document.getElementById('sidebarUserName');
-  const sidebarUserId = document.getElementById('sidebarUserId');
-  if (sidebarUserName) {
-    sidebarUserName.textContent = currentUser.fullName || 'User';
-  }
-  if (sidebarUserId) {
-    sidebarUserId.textContent = currentUser.userId || '--------';
-  }
+  document.getElementById('sidebarUserName').textContent = currentUser.fullName || 'User';
+  document.getElementById('sidebarUserId').textContent = currentUser.userId || '--------';
+  document.getElementById('welcomeUserId').textContent = currentUser.userId || '--------';
   
-  // Welcome screen
-  const welcomeUserId = document.getElementById('welcomeUserId');
-  if (welcomeUserId) {
-    welcomeUserId.textContent = currentUser.userId || '--------';
-  }
-  
-  // Avatar initial
   const avatar = document.getElementById('userAvatar');
   if (avatar) {
-    avatar.style.background = getAvatarColor(currentUser.userId?.toString() || 'user');
     avatar.innerHTML = `<span>${(currentUser.fullName || 'U').charAt(0).toUpperCase()}</span>`;
   }
 }
 
-// ========================================
-// EVENT LISTENERS
-// ========================================
-
-function setupAuthListeners() {
-  // Login form
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleLogin();
-    });
-  }
-  
-  // Register form
-  const registerForm = document.getElementById('registerForm');
-  if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleRegister();
-    });
-  }
-  
-  // Switch forms
-  const showRegisterLink = document.getElementById('showRegisterLink');
-  if (showRegisterLink) {
-    showRegisterLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('loginForm').style.display = 'none';
-      document.getElementById('registerForm').style.display = 'block';
-    });
-  }
-  
-  const showLoginLink = document.getElementById('showLoginLink');
-  if (showLoginLink) {
-    showLoginLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('registerForm').style.display = 'none';
-      document.getElementById('loginForm').style.display = 'block';
-    });
-  }
-  
-  // Logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      if (currentSession) {
-        await callAPI('logout', { sessionToken: currentSession });
-      }
-      clearSession();
-      showAuth();
-      showToast('Signed out successfully', 'success');
-    });
-  }
-}
-
-// ========================================
-// HANDLERS
-// ========================================
-
-async function handleLogin() {
-  const emailInput = document.getElementById('loginEmail');
-  const passwordInput = document.getElementById('loginPassword');
-  
-  const email = emailInput?.value.trim() || '';
-  const password = passwordInput?.value || '';
-  
-  console.log('Login form data:', { email });
-  
-  if (!email || !password) {
-    showToast('Please enter email and password', 'error');
-    return;
-  }
-  
-  const btn = document.getElementById('loginBtn');
-  const originalText = btn.innerHTML;
-  
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Signing in...';
-  
-  console.log('Calling API login with:', { email });
-  
-  try {
-    const result = await callAPI('login', { 
-      email: email, 
-      password: password 
-    });
-    
-    console.log('Login API result:', result);
-    
-    if (result.success) {
-      currentSession = result.sessionToken;
-      currentUser = result.user;
-      
-      localStorage.setItem(STORAGE_KEYS.SESSION, currentSession);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
-      
-      showToast(`Welcome, ${currentUser.fullName}!`, 'success');
-      showApp();
-      
-      // Clear form
-      emailInput.value = '';
-      passwordInput.value = '';
-    } else {
-      showToast(result.error || 'Login failed', 'error');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-}
-
-async function handleRegister() {
-  const fullNameInput = document.getElementById('regFullName');
-  const emailInput = document.getElementById('regEmail');
-  const passwordInput = document.getElementById('regPassword');
-  const confirmInput = document.getElementById('regConfirmPassword');
-  
-  const fullName = fullNameInput?.value.trim() || '';
-  const email = emailInput?.value.trim() || '';
-  const password = passwordInput?.value || '';
-  const confirm = confirmInput?.value || '';
-  
-  console.log('Register form data:', { fullName, email, password: password ? '***' : '' });
-  
-  if (!fullName || !email || !password || !confirm) {
-    showToast('All fields are required', 'error');
-    return;
-  }
-  
-  if (password !== confirm) {
-    showToast('Passwords do not match', 'error');
-    return;
-  }
-  
-  if (password.length < 4) {
-    showToast('Password must be at least 4 characters', 'error');
-    return;
-  }
-  
-  const btn = document.getElementById('registerBtn');
-  const originalText = btn.innerHTML;
-  
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Creating account...';
-  
-  console.log('Calling API register with:', { fullName, email });
-  
-  try {
-    const result = await callAPI('register', { 
-      fullName: fullName, 
-      email: email, 
-      password: password 
-    });
-    
-    console.log('Register API result:', result);
-    
-    if (result.success) {
-      showToast(`Account created! Your ID: ${result.userId}`, 'success');
-      
-      // Switch to login
-      document.getElementById('registerForm').style.display = 'none';
-      document.getElementById('loginForm').style.display = 'block';
-      
-      const loginEmailInput = document.getElementById('loginEmail');
-      if (loginEmailInput) {
-        loginEmailInput.value = email;
-      }
-      
-      // Clear register form
-      fullNameInput.value = '';
-      emailInput.value = '';
-      passwordInput.value = '';
-      confirmInput.value = '';
-      
-      // Re-enable button
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    } else {
-      showToast(result.error || 'Registration failed', 'error');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-}
-
-// ========================================
-// COPY ID FUNCTION
-// ========================================
-
 function copyUserId() {
   if (!currentUser) return;
-  
-  const userId = currentUser.userId.toString();
-  
-  // Try modern clipboard API first
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(userId).then(() => {
-      showToast('User ID copied to clipboard!', 'success');
-    }).catch(() => {
-      fallbackCopy(userId);
-    });
-  } else {
-    fallbackCopy(userId);
-  }
+  navigator.clipboard?.writeText(currentUser.userId.toString()).then(() => {
+    showToast('User ID copied!', false);
+  }).catch(() => {
+    showToast('Failed to copy', true);
+  });
 }
-
-function fallbackCopy(text) {
-  const input = document.createElement('input');
-  input.value = text;
-  input.style.position = 'fixed';
-  input.style.opacity = '0';
-  document.body.appendChild(input);
-  input.select();
-  input.setSelectionRange(0, 99999);
-  
-  try {
-    document.execCommand('copy');
-    showToast('User ID copied!', 'success');
-  } catch (err) {
-    showToast('Failed to copy. Please copy manually.', 'error');
-  }
-  
-  document.body.removeChild(input);
-}
-
-// ========================================
-// EXPOSE TO WINDOW
-// ========================================
 
 window.copyUserId = copyUserId;
 
