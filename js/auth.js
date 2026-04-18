@@ -57,11 +57,20 @@ function updateUserUI() {
   if (!currentUser) return;
   
   // Sidebar
-  document.getElementById('sidebarUserName').textContent = currentUser.fullName || 'User';
-  document.getElementById('sidebarUserId').textContent = currentUser.userId || '--------';
+  const sidebarUserName = document.getElementById('sidebarUserName');
+  const sidebarUserId = document.getElementById('sidebarUserId');
+  if (sidebarUserName) {
+    sidebarUserName.textContent = currentUser.fullName || 'User';
+  }
+  if (sidebarUserId) {
+    sidebarUserId.textContent = currentUser.userId || '--------';
+  }
   
   // Welcome screen
-  document.getElementById('welcomeUserId').textContent = currentUser.userId || '--------';
+  const welcomeUserId = document.getElementById('welcomeUserId');
+  if (welcomeUserId) {
+    welcomeUserId.textContent = currentUser.userId || '--------';
+  }
   
   // Avatar initial
   const avatar = document.getElementById('userAvatar');
@@ -77,39 +86,54 @@ function updateUserUI() {
 
 function setupAuthListeners() {
   // Login form
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await handleLogin();
-  });
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleLogin();
+    });
+  }
   
   // Register form
-  document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await handleRegister();
-  });
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleRegister();
+    });
+  }
   
   // Switch forms
-  document.getElementById('showRegisterLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-  });
+  const showRegisterLink = document.getElementById('showRegisterLink');
+  if (showRegisterLink) {
+    showRegisterLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+    });
+  }
   
-  document.getElementById('showLoginLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-  });
+  const showLoginLink = document.getElementById('showLoginLink');
+  if (showLoginLink) {
+    showLoginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+    });
+  }
   
   // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    if (currentSession) {
-      await callAPI('logout', { sessionToken: currentSession });
-    }
-    clearSession();
-    showAuth();
-    showToast('Signed out successfully', 'success');
-  });
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      if (currentSession) {
+        await callAPI('logout', { sessionToken: currentSession });
+      }
+      clearSession();
+      showAuth();
+      showToast('Signed out successfully', 'success');
+    });
+  }
 }
 
 // ========================================
@@ -117,8 +141,11 @@ function setupAuthListeners() {
 // ========================================
 
 async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
+  const emailInput = document.getElementById('loginEmail');
+  const passwordInput = document.getElementById('loginPassword');
+  
+  const email = emailInput?.value.trim() || '';
+  const password = passwordInput?.value || '';
   
   if (!email || !password) {
     showToast('Please enter email and password', 'error');
@@ -127,37 +154,53 @@ async function handleLogin() {
   
   const btn = document.getElementById('loginBtn');
   const originalText = btn.innerHTML;
+  
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
+  btn.innerHTML = '<span class="spinner"></span> Signing in...';
   
-  const result = await callAPI('login', { email, password });
+  console.log('Attempting login:', { email });
   
-  btn.disabled = false;
-  btn.innerHTML = originalText;
-  
-  if (result.success) {
-    currentSession = result.sessionToken;
-    currentUser = result.user;
+  try {
+    const result = await callAPI('login', { email, password });
     
-    localStorage.setItem(STORAGE_KEYS.SESSION, currentSession);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
+    console.log('Login result:', result);
     
-    showToast(`Welcome, ${currentUser.fullName}!`, 'success');
-    showApp();
-    
-    // Clear form
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
-  } else {
-    showToast(result.error || 'Login failed', 'error');
+    if (result.success) {
+      currentSession = result.sessionToken;
+      currentUser = result.user;
+      
+      localStorage.setItem(STORAGE_KEYS.SESSION, currentSession);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
+      
+      showToast(`Welcome, ${currentUser.fullName}!`, 'success');
+      showApp();
+      
+      // Clear form
+      emailInput.value = '';
+      passwordInput.value = '';
+    } else {
+      showToast(result.error || 'Login failed', 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
 async function handleRegister() {
-  const fullName = document.getElementById('regFullName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  const confirm = document.getElementById('regConfirmPassword').value;
+  const fullNameInput = document.getElementById('regFullName');
+  const emailInput = document.getElementById('regEmail');
+  const passwordInput = document.getElementById('regPassword');
+  const confirmInput = document.getElementById('regConfirmPassword');
+  
+  const fullName = fullNameInput?.value.trim() || '';
+  const email = emailInput?.value.trim() || '';
+  const password = passwordInput?.value || '';
+  const confirm = confirmInput?.value || '';
   
   if (!fullName || !email || !password || !confirm) {
     showToast('All fields are required', 'error');
@@ -176,29 +219,48 @@ async function handleRegister() {
   
   const btn = document.getElementById('registerBtn');
   const originalText = btn.innerHTML;
+  
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
+  btn.innerHTML = '<span class="spinner"></span> Creating account...';
   
-  const result = await callAPI('register', { fullName, email, password });
+  console.log('Attempting registration:', { fullName, email });
   
-  btn.disabled = false;
-  btn.innerHTML = originalText;
-  
-  if (result.success) {
-    showToast(`Account created! Your ID: ${result.userId}`, 'success');
+  try {
+    const result = await callAPI('register', { fullName, email, password });
     
-    // Switch to login
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('loginEmail').value = email;
+    console.log('Registration result:', result);
     
-    // Clear register form
-    document.getElementById('regFullName').value = '';
-    document.getElementById('regEmail').value = '';
-    document.getElementById('regPassword').value = '';
-    document.getElementById('regConfirmPassword').value = '';
-  } else {
-    showToast(result.error || 'Registration failed', 'error');
+    if (result.success) {
+      showToast(`Account created! Your ID: ${result.userId}`, 'success');
+      
+      // Switch to login
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+      
+      const loginEmailInput = document.getElementById('loginEmail');
+      if (loginEmailInput) {
+        loginEmailInput.value = email;
+      }
+      
+      // Clear register form
+      fullNameInput.value = '';
+      emailInput.value = '';
+      passwordInput.value = '';
+      confirmInput.value = '';
+      
+      // Re-enable button for next time
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    } else {
+      showToast(result.error || 'Registration failed', 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
@@ -209,18 +271,43 @@ async function handleRegister() {
 function copyUserId() {
   if (!currentUser) return;
   
-  navigator.clipboard?.writeText(currentUser.userId.toString()).then(() => {
-    showToast('User ID copied to clipboard!', 'success');
-  }).catch(() => {
-    // Fallback
-    const input = document.createElement('input');
-    input.value = currentUser.userId;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand('copy');
-    document.body.removeChild(input);
-    showToast('User ID copied!', 'success');
-  });
+  const userId = currentUser.userId.toString();
+  
+  // Try modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(userId).then(() => {
+      showToast('User ID copied to clipboard!', 'success');
+    }).catch(() => {
+      fallbackCopy(userId);
+    });
+  } else {
+    fallbackCopy(userId);
+  }
 }
+
+function fallbackCopy(text) {
+  const input = document.createElement('input');
+  input.value = text;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  input.setSelectionRange(0, 99999);
+  
+  try {
+    document.execCommand('copy');
+    showToast('User ID copied!', 'success');
+  } catch (err) {
+    showToast('Failed to copy. Please copy manually.', 'error');
+  }
+  
+  document.body.removeChild(input);
+}
+
+// ========================================
+// EXPOSE TO WINDOW
+// ========================================
+
+window.copyUserId = copyUserId;
 
 console.log('✅ ncrypt Auth Loaded');
