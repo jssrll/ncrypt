@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover, shrink-to-fit=no">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,6 +22,17 @@
   
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
+  
+  <style>
+    /* Critical inline styles to remove tap delay immediately */
+    button, a, .btn-primary, .conversation-item, .search-result-item,
+    .search-btn, .refresh-btn, .logout-btn, .manual-refresh-btn,
+    .header-action-btn, .mobile-menu-btn, .mobile-close-btn,
+    .copy-id-btn, [role="button"], [onclick] {
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+  </style>
 </head>
 <body>
   <!-- ======================================== -->
@@ -124,7 +135,7 @@
       <div class="search-container">
         <div class="search-box">
           <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="Search by 9-digit ID...">
+          <input type="text" id="searchInput" placeholder="Search by 9-digit ID..." autocomplete="off">
         </div>
         <button class="search-btn" id="searchBtn">
           <i class="fas fa-user-plus"></i>
@@ -254,12 +265,53 @@
   <script src="js/auth.js"></script>
   <script src="js/chat.js"></script>
   
+  <!-- Remove Click Delay Script -->
+  <script>
+    (function() {
+      // Fast click handler - removes 300ms delay
+      document.addEventListener('touchstart', function() {}, { passive: true });
+      
+      // Disable double-tap zoom on interactive elements
+      document.addEventListener('touchstart', function(e) {
+        if (e.target.closest('button, .btn-primary, .conversation-item, .search-result-item, [role="button"], [onclick]')) {
+          e.target.style.touchAction = 'manipulation';
+        }
+      }, { passive: true });
+      
+      // Instant visual feedback
+      document.addEventListener('mousedown', function(e) {
+        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
+        if (target) {
+          target.style.transition = 'none';
+          target.style.opacity = '0.8';
+        }
+      });
+      
+      document.addEventListener('mouseup', function(e) {
+        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
+        if (target) {
+          target.style.transition = '';
+          target.style.opacity = '';
+        }
+      });
+      
+      document.addEventListener('mouseleave', function(e) {
+        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
+        if (target) {
+          target.style.transition = '';
+          target.style.opacity = '';
+        }
+      });
+      
+      console.log('✅ Click delay removed - buttons respond instantly');
+    })();
+  </script>
+  
   <!-- Initialize app after all scripts loaded -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       console.log('✅ DOM Loaded - Initializing ncrypt');
       
-      // Check if functions exist
       if (typeof showToast !== 'function') {
         console.error('❌ showToast not found! Check utils.js loading');
       } else {
@@ -272,7 +324,6 @@
         console.log('✅ callAPI loaded');
       }
       
-      // Setup auth and start
       if (typeof setupAuthListeners === 'function') {
         setupAuthListeners();
         console.log('✅ Auth listeners setup');

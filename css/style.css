@@ -2,6 +2,47 @@
 /* NCRYPT - MODERN MINIMALIST STYLES        */
 /* ======================================== */
 
+/* Remove tap highlight and click delay on all elements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Instant response for all interactive elements */
+button,
+a,
+.btn-primary,
+.conversation-item,
+.search-result-item,
+.search-btn,
+.refresh-btn,
+.logout-btn,
+.manual-refresh-btn,
+.header-action-btn,
+.mobile-menu-btn,
+.mobile-close-btn,
+.copy-id-btn,
+input[type="submit"],
+[role="button"],
+[onclick] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Remove outline for mouse, keep for keyboard */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 :root {
   --primary: #0f172a;
   --primary-light: #1e293b;
@@ -27,7 +68,7 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --transition: all 0.2s ease;
+  --transition: all 0.15s ease;
 }
 
 * {
@@ -65,7 +106,7 @@ body {
   border-radius: 32px;
   padding: 40px 32px;
   box-shadow: var(--shadow-lg);
-  animation: fadeInUp 0.5s ease;
+  animation: fadeInUp 0.3s ease;
 }
 
 @keyframes fadeInUp {
@@ -166,12 +207,18 @@ body {
   cursor: pointer;
   transition: var(--transition);
   margin-top: 8px;
+  touch-action: manipulation;
 }
 
 .btn-primary:hover {
   background: var(--gray-800);
   transform: translateY(-1px);
   box-shadow: var(--shadow);
+}
+
+.btn-primary:active {
+  opacity: 0.8;
+  transform: translateY(0);
 }
 
 .btn-primary:disabled {
@@ -192,10 +239,15 @@ body {
   text-decoration: none;
   font-weight: 500;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .auth-switch a:hover {
   color: var(--primary);
+}
+
+.auth-switch a:active {
+  opacity: 0.7;
 }
 
 .auth-footer {
@@ -250,6 +302,11 @@ body {
   font-size: 20px;
   cursor: pointer;
   padding: 8px;
+  touch-action: manipulation;
+}
+
+.mobile-close-btn:active {
+  opacity: 0.6;
 }
 
 /* User Profile */
@@ -337,10 +394,15 @@ body {
   cursor: pointer;
   transition: var(--transition);
   font-size: 14px;
+  touch-action: manipulation;
 }
 
 .search-btn:hover {
   background: var(--gray-800);
+}
+
+.search-btn:active {
+  opacity: 0.8;
 }
 
 /* Search Results */
@@ -357,10 +419,15 @@ body {
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .search-result-item:hover {
   background: var(--gray-100);
+}
+
+.search-result-item:active {
+  opacity: 0.7;
 }
 
 .search-result-info h5 {
@@ -398,11 +465,16 @@ body {
   padding: 8px;
   border-radius: 50%;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .refresh-btn:hover {
   color: var(--accent);
   background: var(--gray-100);
+}
+
+.refresh-btn:active {
+  opacity: 0.6;
 }
 
 .conversations-list {
@@ -420,10 +492,15 @@ body {
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .conversation-item:hover {
   background: var(--gray-100);
+}
+
+.conversation-item:active {
+  opacity: 0.7;
 }
 
 .conversation-item.active {
@@ -492,12 +569,17 @@ body {
   gap: 8px;
   cursor: pointer;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .logout-btn:hover {
   background: var(--gray-100);
   border-color: var(--gray-300);
   color: var(--danger);
+}
+
+.logout-btn:active {
+  opacity: 0.7;
 }
 
 /* ======================================== */
@@ -528,6 +610,11 @@ body {
   font-size: 22px;
   cursor: pointer;
   padding: 8px;
+  touch-action: manipulation;
+}
+
+.mobile-menu-btn:active {
+  opacity: 0.6;
 }
 
 .chat-header-info {
@@ -557,11 +644,16 @@ body {
   padding: 8px;
   border-radius: 50%;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .header-action-btn:hover {
   background: var(--gray-100);
   color: var(--accent);
+}
+
+.header-action-btn:active {
+  opacity: 0.6;
 }
 
 /* Welcome Screen */
@@ -661,11 +753,16 @@ body {
   color: var(--gray-600);
   cursor: pointer;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .copy-id-btn:hover {
   background: var(--accent);
   color: white;
+}
+
+.copy-id-btn:active {
+  opacity: 0.7;
 }
 
 /* Chat Area */
@@ -780,11 +877,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
 }
 
 .message-form button:hover {
   background: var(--gray-800);
   transform: scale(1.05);
+}
+
+.message-form button:active {
+  opacity: 0.8;
+  transform: scale(0.98);
 }
 
 .message-form button:disabled {
@@ -818,11 +921,16 @@ body {
   border-radius: 20px;
   font-size: 13px;
   transition: var(--transition);
+  touch-action: manipulation;
 }
 
 .manual-refresh-btn:hover {
   background: var(--gray-100);
   color: var(--accent);
+}
+
+.manual-refresh-btn:active {
+  opacity: 0.6;
 }
 
 /* ======================================== */
@@ -837,7 +945,7 @@ body {
     width: 100%;
     max-width: 320px;
     z-index: 100;
-    transition: left 0.3s ease;
+    transition: left 0.25s ease;
     box-shadow: var(--shadow-lg);
   }
   
@@ -907,9 +1015,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  animation: slideIn 0.3s ease;
+  animation: slideIn 0.25s ease;
   min-width: 280px;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .toast.error {
@@ -949,7 +1057,7 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.6s linear infinite;
   margin-right: 8px;
   vertical-align: middle;
 }
