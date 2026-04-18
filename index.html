@@ -3,337 +3,224 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover, shrink-to-fit=no">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#FFFEF9">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
-  <title>ncrypt • private messenger</title>
-  
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f172a'/%3E%3Cpath d='M30 40 L50 30 L70 40 L70 65 L50 75 L30 65 Z' fill='none' stroke='%2338bdf8' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='50' cy='52' r='8' fill='%2338bdf8'/%3E%3C/svg%3E">
+  <title>Convo — Messaging</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
   
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
-  
-  <style>
-    /* Critical inline styles to remove tap delay immediately */
-    button, a, .btn-primary, .conversation-item, .search-result-item,
-    .search-btn, .refresh-btn, .logout-btn, .manual-refresh-btn,
-    .header-action-btn, .mobile-menu-btn, .mobile-close-btn,
-    .copy-id-btn, [role="button"], [onclick] {
-      touch-action: manipulation !important;
-      -webkit-tap-highlight-color: transparent !important;
-    }
-  </style>
 </head>
 <body>
-  <!-- ======================================== -->
-  <!-- AUTH CONTAINER (Login / Register)        -->
-  <!-- ======================================== -->
-  <div id="authContainer" class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="logo">
-          <i class="fas fa-lock"></i>
-          <span>ncrypt</span>
-        </div>
-        <p class="auth-subtitle">private • secure • simple</p>
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-logo">💬</div>
+    <p class="loading-text">Loading Convo…</p>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen" class="screen hidden">
+    <div class="setup-card">
+      <div class="setup-logo">
+        <div class="setup-logo-icon">💬</div>
+        <span>Convo Messenger</span>
       </div>
-      
+
+      <h2>Connect your Database</h2>
+      <p>Convo uses Google Sheets as its database via Google Apps Script. Follow the steps below to get started.</p>
+
+      <div class="steps-box">
+        <h3>Setup Instructions</h3>
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <p>Create a new <strong>Google Sheet</strong> and note its ID from the URL:<br>
+            <code>https://docs.google.com/spreadsheets/d/<strong>SHEET_ID_HERE</strong>/edit</code>
+          </p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <p>Open <strong>Extensions → Apps Script</strong> in your Sheet. Paste the Apps Script code (click the button below), then click <strong>Deploy → New deployment → Web App</strong>. Set "Who has access" to <strong>Anyone</strong>.</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <p>Copy the generated <strong>Web App URL</strong> and paste it below.</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <p>Add these sheet tabs in your Google Sheet: <code>Users    Messages</code></p>
+        </div>
+      </div>
+
+      <button class="btn-secondary" style="width:100%;margin-bottom:16px;padding:12px;" onclick="showScriptModal()">
+        📋 View Apps Script Code
+      </button>
+
+      <div class="setup-input-group">
+        <label>Apps Script Web App URL</label>
+        <input class="setup-input" id="setup-url" type="url" placeholder="https://script.google.com/macros/s/…/exec">
+      </div>
+
+      <button class="btn-primary" onclick="saveScriptUrl()">Continue →</button>
+    </div>
+  </div>
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen" class="screen hidden">
+    <div class="auth-wrapper">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">💬</div>
+        <h1>Convo</h1>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+      </div>
+
       <!-- Login Form -->
-      <form id="loginForm" class="auth-form">
-        <h2>Welcome back</h2>
-        <div class="input-group">
-          <i class="fas fa-envelope"></i>
-          <input type="email" id="loginEmail" placeholder="Email address" autocomplete="email" required>
+      <div id="login-form" class="auth-form">
+        <div class="form-group">
+          <label>Gmail Address</label>
+          <input class="form-input" id="login-email" type="email" placeholder="you@gmail.com" autocomplete="email">
+          <span class="error-msg" id="login-email-err">⚠ Enter a valid Gmail address.</span>
         </div>
-        <div class="input-group">
-          <i class="fas fa-key"></i>
-          <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" required>
+        <div class="form-group">
+          <label>Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="Your password" autocomplete="current-password">
+          <span class="error-msg" id="login-pass-err">⚠ Password is required.</span>
         </div>
-        <button type="submit" class="btn-primary" id="loginBtn">
-          <span>Sign In</span>
-          <i class="fas fa-arrow-right"></i>
-        </button>
-        <p class="auth-switch">
-          Don't have an account? 
-          <a href="#" id="showRegisterLink">Create one</a>
-        </p>
-      </form>
-      
-      <!-- Register Form (Hidden by default) -->
-      <form id="registerForm" class="auth-form" style="display: none;">
-        <h2>Create account</h2>
-        <div class="input-group">
-          <i class="fas fa-user"></i>
-          <input type="text" id="regFullName" placeholder="Full name" autocomplete="name" required>
+        <button class="auth-submit" id="login-btn" onclick="handleLogin()">Sign In</button>
+        <p class="form-footer">No account? <a href="#" onclick="switchTab('login')">Create one</a></p>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-form" class="auth-form hidden">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input class="form-input" id="reg-name" type="text" placeholder="Jane Doe" autocomplete="name">
+          <span class="error-msg" id="reg-name-err">⚠ Enter your full name.</span>
         </div>
-        <div class="input-group">
-          <i class="fas fa-envelope"></i>
-          <input type="email" id="regEmail" placeholder="Email address" autocomplete="email" required>
+        <div class="form-group">
+          <label>Gmail Address</label>
+          <input class="form-input" id="reg-email" type="email" placeholder="you@gmail.com" autocomplete="email">
+          <span class="error-msg" id="reg-email-err">⚠ Enter a valid Gmail address.</span>
         </div>
-        <div class="input-group">
-          <i class="fas fa-key"></i>
-          <input type="password" id="regPassword" placeholder="Password" autocomplete="new-password" required>
+        <div class="form-group">
+          <label>Password</label>
+          <input class="form-input" id="reg-password" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+          <span class="error-msg" id="reg-pass-err">⚠ Password must be at least 6 characters.</span>
         </div>
-        <div class="input-group">
-          <i class="fas fa-check-circle"></i>
-          <input type="password" id="regConfirmPassword" placeholder="Confirm password" autocomplete="new-password" required>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input class="form-input" id="reg-confirm" type="password" placeholder="Repeat password" autocomplete="new-password">
+          <span class="error-msg" id="reg-confirm-err">⚠ Passwords do not match.</span>
         </div>
-        <button type="submit" class="btn-primary" id="registerBtn">
-          <span>Sign Up</span>
-          <i class="fas fa-arrow-right"></i>
-        </button>
-        <p class="auth-switch">
-          Already have an account? 
-          <a href="#" id="showLoginLink">Sign in</a>
-        </p>
-      </form>
-      
-      <div class="auth-footer">
-        <p><i class="fas fa-shield-alt"></i> End-to-end encrypted • Friends only</p>
+        <button class="auth-submit" id="reg-btn" onclick="handleRegister()">Create Account</button>
+        <p class="form-footer">Have an account? <a href="#" onclick="switchTab('login')">Sign in</a></p>
       </div>
     </div>
   </div>
-  
-  <!-- ======================================== -->
-  <!-- MAIN APP CONTAINER (Hidden until login)  -->
-  <!-- ======================================== -->
-  <div id="appContainer" class="app-container" style="display: none;">
+
+  <!-- MAIN APP SCREEN -->
+  <div id="app-screen" class="screen hidden">
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="logo">
-          <i class="fas fa-lock"></i>
-          <span>ncrypt</span>
-        </div>
-        <button class="mobile-close-btn" id="closeSidebarBtn">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      
-      <!-- User Profile Summary -->
-      <div class="user-profile">
-        <div class="avatar" id="userAvatar">
-          <i class="fas fa-user"></i>
-        </div>
-        <div class="user-info">
-          <h4 id="sidebarUserName">Loading...</h4>
-          <p>ID: <span id="sidebarUserId">------</span></p>
-        </div>
-      </div>
-      
-      <!-- Search Bar -->
-      <div class="search-container">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="Search by 9-digit ID..." autocomplete="off">
-        </div>
-        <button class="search-btn" id="searchBtn">
-          <i class="fas fa-user-plus"></i>
-        </button>
-      </div>
-      
-      <!-- Search Results -->
-      <div id="searchResults" class="search-results" style="display: none;"></div>
-      
-      <!-- Conversations List -->
-      <div class="conversations-header">
-        <h3>Messages</h3>
-        <button class="refresh-btn" id="refreshConversationsBtn" title="Refresh">
-          <i class="fas fa-sync-alt"></i>
-        </button>
-      </div>
-      <div class="conversations-list" id="conversationsList">
-        <div class="empty-state">
-          <i class="fas fa-comments"></i>
-          <p>No conversations yet</p>
-          <span>Search for a user to start chatting</span>
-        </div>
-      </div>
-      
-      <!-- Sidebar Footer -->
-      <div class="sidebar-footer">
-        <button class="logout-btn" id="logoutBtn">
-          <i class="fas fa-sign-out-alt"></i>
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </aside>
-    
-    <!-- Main Chat Area -->
-    <main class="chat-main">
-      <!-- Mobile Header -->
-      <header class="chat-header">
-        <button class="mobile-menu-btn" id="mobileMenuBtn">
-          <i class="fas fa-bars"></i>
-        </button>
-        <div class="chat-header-info" id="chatHeaderInfo">
-          <div class="avatar small">
-            <i class="fas fa-user"></i>
+        <div class="profile-section">
+          <div class="profile-avatar" id="my-avatar">?</div>
+          <div class="profile-info">
+            <div class="profile-name" id="my-name">Loading…</div>
+            <div class="profile-id" id="my-id">ID: —</div>
           </div>
-          <div>
-            <h4 id="chatHeaderName">Select a conversation</h4>
-            <p id="chatHeaderStatus">ncrypt messenger</p>
+          <div class="profile-actions">
+            <button class="icon-btn" onclick="handleLogout()" title="Sign out">⬡</button>
           </div>
         </div>
-        <button class="header-action-btn" id="chatInfoBtn" style="display: none;">
-          <i class="fas fa-info-circle"></i>
-        </button>
-      </header>
-      
-      <!-- Welcome Screen (shown when no chat selected) -->
-      <div id="welcomeScreen" class="welcome-screen">
-        <div class="welcome-content">
-          <div class="welcome-icon">
-            <i class="fas fa-lock"></i>
+
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search by 9-digit ID…" maxlength="9" oninput="handleSearch(this.value)" onkeydown="if(event.key==='Enter')handleSearch(this.value,true)">
+        </div>
+      </div>
+
+      <div id="search-results" class="search-results hidden"></div>
+
+      <div class="sidebar-label">Messages</div>
+      <div class="conversations-list" id="conversations-list">
+        <div class="empty-convs">
+          <span style="font-size:28px">💬</span>
+          <p>No conversations yet.<br>Search for a user by their ID to start chatting.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Area -->
+    <div class="main-area" id="main-area">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-state-icon">💬</div>
+        <h3>Pick up where you left off</h3>
+        <p>Select a conversation or search for someone by their 9-digit ID.</p>
+      </div>
+
+      <div id="chat-view" class="hidden" style="display:flex;flex-direction:column;height:100%;">
+        <div class="chat-header">
+          <button class="mobile-back" onclick="closeSidebar(false); showView('empty')" title="Back">‹</button>
+          <div class="chat-header-avatar" id="chat-avatar">?</div>
+          <div class="chat-header-info">
+            <h3 id="chat-name">—</h3>
+            <p id="chat-id">ID: —</p>
           </div>
-          <h2>ncrypt</h2>
-          <p>Private messaging for you and your friends</p>
-          <div class="welcome-features">
-            <div class="feature">
-              <i class="fas fa-id-card"></i>
-              <span>Share your 9-digit ID</span>
+        </div>
+
+        <div class="messages-area" id="messages-area"></div>
+
+        <div class="msg-input-area">
+          <div class="msg-input-row">
+            <div class="msg-input-wrap">
+              <textarea class="msg-input" id="msg-input" placeholder="Type a message…" rows="1" onkeydown="onMsgKeyDown(event)" oninput="autoResize(this)"></textarea>
             </div>
-            <div class="feature">
-              <i class="fas fa-search"></i>
-              <span>Search for friends</span>
-            </div>
-            <div class="feature">
-              <i class="fas fa-comment-dots"></i>
-              <span>Start chatting instantly</span>
-            </div>
-          </div>
-          <p class="your-id">
-            Your ID: <strong id="welcomeUserId">--------</strong>
-            <button class="copy-id-btn" id="copyIdBtn" title="Copy ID">
-              <i class="fas fa-copy"></i>
-            </button>
-          </p>
-        </div>
-      </div>
-      
-      <!-- Chat Area (shown when conversation selected) -->
-      <div id="chatArea" class="chat-area" style="display: none;">
-        <!-- Messages Container -->
-        <div class="messages-container" id="messagesContainer">
-          <div class="messages-list" id="messagesList"></div>
-          <div class="scroll-anchor" id="scrollAnchor"></div>
-        </div>
-        
-        <!-- Message Input -->
-        <div class="message-input-container">
-          <form id="messageForm" class="message-form">
-            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
-            <button type="submit" id="sendMessageBtn">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </form>
-          <div class="input-footer">
-            <span class="auto-refresh-indicator">
-              <i class="fas fa-sync-alt fa-spin" id="refreshSpinner" style="display: none;"></i>
-              <span id="refreshStatus">Auto-refresh 30s</span>
-            </span>
-            <button class="manual-refresh-btn" id="manualRefreshBtn" title="Refresh messages">
-              <i class="fas fa-arrow-rotate-right"></i>
-            </button>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
           </div>
         </div>
       </div>
-    </main>
-    
-    <!-- Mobile Overlay -->
-    <div id="mobileOverlay" class="mobile-overlay" style="display: none;"></div>
+    </div>
+
+    <button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()">☰</button>
   </div>
-  
-  <!-- Toast Container -->
-  <div id="toastContainer" class="toast-container"></div>
-  
-  <!-- ======================================== -->
-  <!-- JAVASCRIPT - ORDER MATTERS               -->
-  <!-- ======================================== -->
+
+  <!-- APPS SCRIPT MODAL -->
+  <div id="script-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>📋 Google Apps Script Code</h2>
+      <p>Copy this code and paste it into your Google Sheet's Apps Script editor (<strong>Extensions → Apps Script</strong>), then deploy it as a Web App with access set to <strong>"Anyone"</strong>.</p>
+      <div class="code-block" id="script-code-block"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeScriptModal()">Close</button>
+        <button class="btn-copy" onclick="copyScriptCode()">Copy Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/chat.js"></script>
-  
-  <!-- Remove Click Delay Script -->
-  <script>
-    (function() {
-      // Fast click handler - removes 300ms delay
-      document.addEventListener('touchstart', function() {}, { passive: true });
-      
-      // Disable double-tap zoom on interactive elements
-      document.addEventListener('touchstart', function(e) {
-        if (e.target.closest('button, .btn-primary, .conversation-item, .search-result-item, [role="button"], [onclick]')) {
-          e.target.style.touchAction = 'manipulation';
-        }
-      }, { passive: true });
-      
-      // Instant visual feedback
-      document.addEventListener('mousedown', function(e) {
-        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
-        if (target) {
-          target.style.transition = 'none';
-          target.style.opacity = '0.8';
-        }
-      });
-      
-      document.addEventListener('mouseup', function(e) {
-        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
-        if (target) {
-          target.style.transition = '';
-          target.style.opacity = '';
-        }
-      });
-      
-      document.addEventListener('mouseleave', function(e) {
-        const target = e.target.closest('button, .btn-primary, .conversation-item, .search-result-item');
-        if (target) {
-          target.style.transition = '';
-          target.style.opacity = '';
-        }
-      });
-      
-      console.log('✅ Click delay removed - buttons respond instantly');
-    })();
-  </script>
-  
-  <!-- Initialize app after all scripts loaded -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('✅ DOM Loaded - Initializing ncrypt');
-      
-      if (typeof showToast !== 'function') {
-        console.error('❌ showToast not found! Check utils.js loading');
-      } else {
-        console.log('✅ showToast loaded');
-      }
-      
-      if (typeof callAPI !== 'function') {
-        console.error('❌ callAPI not found! Check utils.js loading');
-      } else {
-        console.log('✅ callAPI loaded');
-      }
-      
-      if (typeof setupAuthListeners === 'function') {
-        setupAuthListeners();
-        console.log('✅ Auth listeners setup');
-      }
-      
-      if (typeof initAuth === 'function') {
-        initAuth();
-        console.log('✅ Auth initialized');
-      }
-    });
-  </script>
+  <script src="js/app.js"></script>
 </body>
 </html>

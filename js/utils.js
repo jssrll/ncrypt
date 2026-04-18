@@ -1,159 +1,166 @@
-// ========================================
-// NCRYPT - UTILITY FUNCTIONS
-// ========================================
+// ============================================================
+// CONVO MESSENGER - UTILITY FUNCTIONS
+// ============================================================
 
 /**
  * Show toast notification
  */
-function showToast(message, type = 'info') {
-  console.log('Toast:', message, type);
-  
-  const container = document.getElementById('toastContainer');
-  if (!container) {
-    console.error('Toast container not found!');
-    alert(message);
-    return;
-  }
-  
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  
-  let icon = 'info-circle';
-  if (type === 'success') icon = 'check-circle';
-  if (type === 'error') icon = 'exclamation-circle';
-  
-  toast.innerHTML = `
-    <i class="fas fa-${icon}"></i>
-    <span>${escapeHtml(message)}</span>
-  `;
-  
+  toast.textContent = msg;
   container.appendChild(toast);
-  
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
-      }
-    }, 300);
-  }, 4000);
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 /**
- * Escape HTML to prevent XSS
+ * Get element value
  */
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function val(id) {
+  return document.getElementById(id).value.trim();
 }
 
 /**
- * Format timestamp to readable time
+ * Show element
  */
-function formatTime(timestamp) {
-  if (!timestamp) return '';
-  
-  const date = new Date(timestamp);
+function showEl(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+
+/**
+ * Hide element
+ */
+function hideEl(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+/**
+ * Delay function
+ */
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+/**
+ * Validate email format
+ */
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
+ * Generate 9-digit user ID
+ */
+function generateUserId() {
+  return String(Math.floor(100000000 + Math.random() * 900000000));
+}
+
+/**
+ * Get initials from name
+ */
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+/**
+ * Escape HTML
+ */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Format timestamp for conversation list
+ */
+function formatTime(ts) {
+  const d = new Date(ts);
   const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const diff = now - d;
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+  if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 /**
  * Format time for messages (HH:MM)
  */
-function formatMessageTime(timestamp) {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+function formatTimeShort(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /**
- * Generate random avatar color based on string
+ * Format date for message dividers
  */
-function getAvatarColor(str) {
-  if (!str) return '#0f172a';
-  let hash = 0;
-  const strValue = String(str);
-  for (let i = 0; i < strValue.length; i++) {
-    hash = strValue.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 45%)`;
+function formatDate(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  const yest = new Date(now);
+  yest.setDate(yest.getDate() - 1);
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 /**
- * API Call wrapper - FIXED VERSION
+ * Show error on form field
  */
-async function callAPI(action, data = {}) {
-  try {
-    // Build URL with parameters
-    const urlParams = new URLSearchParams();
-    urlParams.append('action', action);
-    
-    // Add all data parameters
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && value !== null) {
-        urlParams.append(key, String(value));
-      }
-    }
-    
-    const url = `${CONFIG.API_URL}?${urlParams.toString()}`;
-    
-    console.log('API Call:', action, data);
-    console.log('Full URL:', url);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    
-    const text = await response.text();
-    console.log('API Raw Response:', text);
-    
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch (e) {
-      console.error('JSON Parse Error:', e);
-      return { success: false, error: 'Invalid server response' };
-    }
-    
-    console.log('API Parsed Result:', result);
-    return result;
-    
-  } catch (error) {
-    console.error('API Error:', error);
-    return { success: false, error: 'Network error. Please check your connection.' };
+function showError(inputId, errId) {
+  document.getElementById(inputId).classList.add('error');
+  document.getElementById(errId).classList.add('show');
+}
+
+/**
+ * Clear all form errors
+ */
+function clearErrors(inputIds) {
+  inputIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('error');
+  });
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
+}
+
+/**
+ * Set button loading state
+ */
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  
+  if (btnId === 'login-btn') {
+    btn.innerHTML = loading ? '<span class="spinner"></span>' : 'Sign In';
+  } else if (btnId === 'reg-btn') {
+    btn.innerHTML = loading ? '<span class="spinner"></span>' : 'Create Account';
   }
 }
 
 /**
- * Debounce function
+ * Auto-resize textarea
  */
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-console.log('✅ ncrypt Utils Loaded');
+/**
+ * API call wrapper
+ */
+async function apiCall(params) {
+  const url = new URL(STATE.scriptUrl);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), { redirect: 'follow' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+console.log('✅ Convo Utils Loaded');

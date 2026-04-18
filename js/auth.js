@@ -1,178 +1,121 @@
-// ========================================
-// NCRYPT - AUTHENTICATION
-// ========================================
+// ============================================================
+// CONVO MESSENGER - AUTHENTICATION
+// ============================================================
 
-let currentSession = null;
-let currentUser = null;
-
-// ========================================
-// INITIALIZATION
-// ========================================
-
-async function initAuth() {
-  const stored = localStorage.getItem(STORAGE_KEYS.USER);
-  const storedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
-  
-  if (stored && storedSession) {
-    try {
-      window.currentUser = JSON.parse(stored);
-      currentUser = window.currentUser;
-      currentSession = storedSession;
-      document.getElementById('authContainer').style.display = 'none';
-      document.getElementById('appContainer').style.display = 'flex';
-      updateUserUI();
-      if (typeof initChat === 'function') initChat();
-    } catch(e) { 
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      localStorage.removeItem(STORAGE_KEYS.SESSION);
-    }
+/**
+ * Switch between login and register tabs
+ */
+function switchTab(tab) {
+  const tabs = document.querySelectorAll('.auth-tab');
+  if (tab === 'login') {
+    tabs[0].classList.add('active');
+    tabs[1].classList.remove('active');
+    showEl('login-form');
+    hideEl('register-form');
+  } else {
+    tabs[1].classList.add('active');
+    tabs[0].classList.remove('active');
+    hideEl('login-form');
+    showEl('register-form');
   }
 }
 
-function setupAuthListeners() {
-  // Login button
-  document.getElementById('loginBtn')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const btn = e.target;
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) { 
-      showToast('Please enter email and password', true); 
-      return; 
-    }
-    
-    const originalText = btn.innerHTML;
-    btn.disabled = true; 
-    btn.innerHTML = '<span class="spinner"></span> Signing in...';
-    
-    const result = await callAPI('login', { email, password });
-    
-    btn.disabled = false; 
-    btn.innerHTML = originalText;
-    
-    if (result.success) {
-      window.currentUser = result.user;
-      currentUser = result.user;
-      currentSession = result.sessionToken;
-      
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
-      localStorage.setItem(STORAGE_KEYS.SESSION, currentSession);
-      
-      document.getElementById('authContainer').style.display = 'none';
-      document.getElementById('appContainer').style.display = 'flex';
-      
-      updateUserUI();
-      if (typeof initChat === 'function') initChat();
-      
-      showToast(`Welcome, ${currentUser.fullName}!`, false);
-      
-      // Clear form
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPassword').value = '';
-    } else { 
-      showToast(result.error || 'Invalid credentials', true); 
-    }
-  });
+/**
+ * Handle login
+ */
+async function handleLogin() {
+  clearErrors(['login-email', 'login-password']);
+  const email = val('login-email');
+  const pass = val('login-password');
+  let ok = true;
 
-  // Register button
-  document.getElementById('registerBtn')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const btn = e.target;
-    const fullName = document.getElementById('regFullName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirm = document.getElementById('regConfirmPassword').value;
-    
-    if (!fullName || !email || !password) { 
-      showToast('All fields required', true); 
-      return; 
-    }
-    if (password !== confirm) { 
-      showToast("Passwords don't match", true); 
-      return; 
-    }
-    
-    const originalText = btn.innerHTML;
-    btn.disabled = true; 
-    btn.innerHTML = '<span class="spinner"></span> Registering...';
-    
-    const result = await callAPI('register', { fullName, email, password });
-    
-    btn.disabled = false; 
-    btn.innerHTML = originalText;
-    
-    if (result.success) {
-      showToast(`Registration successful! Your ID: ${result.userId}`, false);
-      document.getElementById('registerForm').style.display = 'none';
-      document.getElementById('loginForm').style.display = 'block';
-      document.getElementById('loginEmail').value = email;
-      
-      // Clear form
-      document.getElementById('regFullName').value = '';
-      document.getElementById('regEmail').value = '';
-      document.getElementById('regPassword').value = '';
-      document.getElementById('regConfirmPassword').value = '';
-    } else { 
-      showToast(result.error || 'Registration failed', true); 
-    }
-  });
-
-  // Logout button
-  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    if (currentSession) {
-      await callAPI('logout', { sessionToken: currentSession });
-    }
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    localStorage.removeItem(STORAGE_KEYS.SESSION);
-    window.currentUser = null;
-    currentUser = null;
-    currentSession = null;
-    
-    document.getElementById('authContainer').style.display = 'flex';
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
-    
-    showToast('Logged out', false);
-  });
-
-  // Switch forms
-  document.getElementById('showRegisterLink')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-  });
-
-  document.getElementById('showLoginLink')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-  });
-}
-
-function updateUserUI() {
-  if (!currentUser) return;
-  
-  document.getElementById('sidebarUserName').textContent = currentUser.fullName || 'User';
-  document.getElementById('sidebarUserId').textContent = currentUser.userId || '--------';
-  document.getElementById('welcomeUserId').textContent = currentUser.userId || '--------';
-  
-  const avatar = document.getElementById('userAvatar');
-  if (avatar) {
-    avatar.innerHTML = `<span>${(currentUser.fullName || 'U').charAt(0).toUpperCase()}</span>`;
+  if (!isValidEmail(email)) {
+    showError('login-email', 'login-email-err');
+    ok = false;
   }
+  if (!pass) {
+    showError('login-password', 'login-pass-err');
+    ok = false;
+  }
+  if (!ok) return;
+
+  setLoading('login-btn', true);
+  try {
+    const res = await apiCall({ action: 'login', email, password: pass });
+    if (res.ok) {
+      STATE.currentUser = res;
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(res));
+      hideEl('auth-screen');
+      showApp();
+    } else {
+      showToast(res.error || 'Login failed.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error. Check your Apps Script URL.', 'error');
+  }
+  setLoading('login-btn', false);
 }
 
-function copyUserId() {
-  if (!currentUser) return;
-  navigator.clipboard?.writeText(currentUser.userId.toString()).then(() => {
-    showToast('User ID copied!', false);
-  }).catch(() => {
-    showToast('Failed to copy', true);
-  });
+/**
+ * Handle registration
+ */
+async function handleRegister() {
+  clearErrors(['reg-name', 'reg-email', 'reg-password', 'reg-confirm']);
+  const name = val('reg-name');
+  const email = val('reg-email');
+  const pass = val('reg-password');
+  const confirm = val('reg-confirm');
+  let ok = true;
+
+  if (!name) {
+    showError('reg-name', 'reg-name-err');
+    ok = false;
+  }
+  if (!isValidEmail(email)) {
+    showError('reg-email', 'reg-email-err');
+    ok = false;
+  }
+  if (pass.length < 6) {
+    showError('reg-password', 'reg-pass-err');
+    ok = false;
+  }
+  if (pass !== confirm) {
+    showError('reg-confirm', 'reg-confirm-err');
+    ok = false;
+  }
+  if (!ok) return;
+
+  setLoading('reg-btn', true);
+  try {
+    const userId = generateUserId();
+    const res = await apiCall({ action: 'register', name, email, password: pass, userId });
+    if (res.ok) {
+      STATE.currentUser = res;
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(res));
+      showToast('Account created! Welcome to Convo 🎉', 'success');
+      hideEl('auth-screen');
+      showApp();
+    } else {
+      showToast(res.error || 'Registration failed.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error. Check your Apps Script URL.', 'error');
+  }
+  setLoading('reg-btn', false);
 }
 
-window.copyUserId = copyUserId;
+/**
+ * Handle logout
+ */
+function handleLogout() {
+  clearInterval(STATE.pollTimer);
+  STATE.currentUser = null;
+  STATE.activeChat = null;
+  STATE.conversations = [];
+  localStorage.removeItem(STORAGE_KEYS.USER);
+  hideEl('app-screen');
+  showEl('auth-screen');
+  showToast('Signed out.', 'info');
+}
 
-console.log('✅ ncrypt Auth Loaded');
+console.log('✅ Convo Auth Loaded');
