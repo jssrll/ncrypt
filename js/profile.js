@@ -9,13 +9,24 @@ function initProfile() {
 
   // QR buttons
   const showQr = document.getElementById('show-qr-btn');
-  if (showQr) showQr.addEventListener('click', showQRCode);
+  if (showQr) showQr.addEventListener('click', () => {
+    closeModal('profile-modal');
+    openModal('qr-modal');
+    setTimeout(generateUserQRCode, 150);
+  });
 
   const scanQr = document.getElementById('scan-qr-btn');
-  if (scanQr) scanQr.addEventListener('click', startQRScannerFlow);
+  if (scanQr) scanQr.addEventListener('click', () => {
+    closeModal('profile-modal');
+    openModal('scanner-modal');
+    startQRScanner();
+  });
 
   const uploadQr = document.getElementById('upload-qr-btn');
-  if (uploadQr) uploadQr.addEventListener('click', triggerQRUpload);
+  if (uploadQr) uploadQr.addEventListener('click', () => {
+    closeModal('profile-modal');
+    document.getElementById('qr-file-input').click();
+  });
 
   const downloadQr = document.getElementById('download-qr-btn');
   if (downloadQr) downloadQr.addEventListener('click', downloadQRCode);
@@ -30,7 +41,7 @@ function initProfile() {
     });
   }
 
-  // Scanner stop
+  // Scanner stop button
   const stopBtn = document.getElementById('stop-scanner-btn');
   if (stopBtn) {
     stopBtn.addEventListener('click', () => {
@@ -47,21 +58,4 @@ function openProfileModal() {
   document.getElementById('profile-email').textContent = currentUser.email || '—';
   document.getElementById('profile-id').textContent = currentUser.id || '—';
   openModal('profile-modal');
-}
-
-function showQRCode() {
-  closeModal('profile-modal');
-  openModal('qr-modal');
-  setTimeout(generateUserQRCode, 150);
-}
-
-function startQRScannerFlow() {
-  closeModal('profile-modal');
-  openModal('scanner-modal');
-  startQRScanner();
-}
-
-function triggerQRUpload() {
-  closeModal('profile-modal');
-  document.getElementById('qr-file-input').click();
 }
