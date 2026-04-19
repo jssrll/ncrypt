@@ -3,7 +3,7 @@
 // ============================================================
 
 // Backend URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLI8TqnaDJ5GVcHg344K2NJvChDYrUErK0STEqcxG3bJLaa7TdwpA0DE02ipfZz_Yu/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxE2hkihYntBMjSVYmCSddTYZDWxW6VLjyuZbws5P4aUAgrCaNbasj6AEfvih3FB5xA/exec';
 
 // Current authenticated user
 let currentUser = null;
