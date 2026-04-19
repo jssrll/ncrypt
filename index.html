@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ncrypt — Secure Messenger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <!-- QR Code Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
@@ -20,7 +19,7 @@
     <div class="loading-logo">
       <span class="material-icons-round" style="font-size: 36px;">chat</span>
     </div>
-    <p class="loading-text">Initializing ncrypt<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
+    <p class="loading-text">ncrypt<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
   </div>
 
   <!-- Auth Screen -->
@@ -40,91 +39,53 @@
             <button class="auth-tab" data-tab="register">Create Account</button>
           </div>
 
-          <!-- Login Form -->
           <form id="login-form" class="auth-form">
             <div class="form-group">
               <label for="login-email">Email Address</label>
-              <input type="email" id="login-email" class="form-input"
-                placeholder="you@example.com" autocomplete="email">
-              <span class="error-msg" id="err-login-email">
-                <span class="material-icons-round">warning</span>
-                Please enter a valid email address.
-              </span>
+              <input type="email" id="login-email" class="form-input" placeholder="you@example.com" autocomplete="email">
+              <span class="error-msg" id="err-login-email"><span class="material-icons-round">warning</span>Valid email required</span>
             </div>
-
             <div class="form-group">
               <label for="login-password">Password</label>
               <div class="pw-wrap">
-                <input type="password" id="login-password" class="form-input"
-                  placeholder="Your password" autocomplete="current-password">
+                <input type="password" id="login-password" class="form-input" placeholder="Your password" autocomplete="current-password">
                 <span class="material-icons-round pw-eye" data-target="login-password">visibility</span>
               </div>
-              <span class="error-msg" id="err-login-pw">
-                <span class="material-icons-round">warning</span>
-                Password is required.
-              </span>
+              <span class="error-msg" id="err-login-pw"><span class="material-icons-round">warning</span>Password required</span>
             </div>
-
             <button type="submit" class="auth-submit" id="login-btn">Sign In</button>
-
-            <p class="form-footer">
-              No account? <a data-tab="register">Create one free</a>
-            </p>
+            <p class="form-footer">No account? <a data-tab="register">Create one</a></p>
           </form>
 
-          <!-- Register Form -->
           <form id="register-form" class="auth-form hidden">
             <div class="form-group">
               <label for="reg-name">Full Name</label>
-              <input type="text" id="reg-name" class="form-input"
-                placeholder="John Doe" autocomplete="name">
-              <span class="error-msg" id="err-reg-name">
-                <span class="material-icons-round">warning</span>
-                Full name is required.
-              </span>
+              <input type="text" id="reg-name" class="form-input" placeholder="John Doe" autocomplete="name">
+              <span class="error-msg" id="err-reg-name"><span class="material-icons-round">warning</span>Name required</span>
             </div>
-
             <div class="form-group">
               <label for="reg-email">Email Address</label>
-              <input type="email" id="reg-email" class="form-input"
-                placeholder="you@example.com" autocomplete="email">
-              <span class="error-msg" id="err-reg-email">
-                <span class="material-icons-round">warning</span>
-                Please enter a valid email address.
-              </span>
+              <input type="email" id="reg-email" class="form-input" placeholder="you@example.com" autocomplete="email">
+              <span class="error-msg" id="err-reg-email"><span class="material-icons-round">warning</span>Valid email required</span>
             </div>
-
             <div class="form-group">
               <label for="reg-password">Password</label>
               <div class="pw-wrap">
-                <input type="password" id="reg-password" class="form-input"
-                  placeholder="Min. 8 characters" autocomplete="new-password">
+                <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password">
                 <span class="material-icons-round pw-eye" data-target="reg-password">visibility</span>
               </div>
-              <span class="error-msg" id="err-reg-pw">
-                <span class="material-icons-round">warning</span>
-                Password must be at least 8 characters.
-              </span>
+              <span class="error-msg" id="err-reg-pw"><span class="material-icons-round">warning</span>Min 8 characters</span>
             </div>
-
             <div class="form-group">
               <label for="reg-confirm">Confirm Password</label>
               <div class="pw-wrap">
-                <input type="password" id="reg-confirm" class="form-input"
-                  placeholder="Repeat your password" autocomplete="new-password">
+                <input type="password" id="reg-confirm" class="form-input" placeholder="Repeat password" autocomplete="new-password">
                 <span class="material-icons-round pw-eye" data-target="reg-confirm">visibility</span>
               </div>
-              <span class="error-msg" id="err-reg-confirm">
-                <span class="material-icons-round">warning</span>
-                Passwords do not match.
-              </span>
+              <span class="error-msg" id="err-reg-confirm"><span class="material-icons-round">warning</span>Passwords don't match</span>
             </div>
-
             <button type="submit" class="auth-submit" id="register-btn">Create Account</button>
-
-            <p class="form-footer">
-              Already registered? <a data-tab="login">Sign in</a>
-            </p>
+            <p class="form-footer">Already registered? <a data-tab="login">Sign in</a></p>
           </form>
         </div>
       </div>
@@ -134,97 +95,69 @@
   <!-- Messenger App Screen -->
   <div id="app-screen" class="hidden">
     <div class="messenger-container">
-
-      <!-- Sidebar - Conversations List -->
-      <div class="messenger-sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo">
-            <span class="material-icons-round">chat</span>
-            <span>ncrypt</span>
-          </div>
-          <div class="sidebar-header-actions">
-            <button class="btn-icon" id="sidebar-profile" title="Profile">
-              <span class="material-icons-round">person</span>
-            </button>
-            <button class="btn-icon" id="sidebar-settings" title="Settings">
-              <span class="material-icons-round">settings</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Search Users -->
-        <div class="search-section">
-          <div class="search-box">
-            <span class="material-icons-round">search</span>
-            <input type="text" id="user-search-input" placeholder="Search users by ID or name...">
-            <button class="btn-search" id="search-btn">
-              <span class="material-icons-round">search</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Search Results Dropdown -->
-        <div id="search-results" class="search-results hidden"></div>
-
-        <!-- Conversations List -->
-        <div class="conversations-list" id="conversations-list">
-          <!-- Dynamically populated -->
-        </div>
-
-        <!-- User Info Footer -->
-        <div class="sidebar-footer">
-          <div class="current-user-info" id="sidebar-user-info" style="cursor: pointer;">
-            <div class="user-avatar" id="sidebar-avatar">—</div>
-            <div class="user-details">
-              <span class="user-name" id="sidebar-name">—</span>
-              <span class="user-id" id="sidebar-id">—</span>
+      <!-- Conversations List Screen (Mobile: always visible when no chat selected) -->
+      <div id="conversations-screen" class="conversations-screen">
+        <div class="messenger-sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-logo">
+              <span class="material-icons-round">chat</span>
+              <span>ncrypt</span>
+            </div>
+            <div class="sidebar-header-actions">
+              <button class="btn-icon" id="sidebar-profile" title="Profile">
+                <span class="material-icons-round">person</span>
+              </button>
+              <button class="btn-icon" id="sidebar-settings" title="Settings">
+                <span class="material-icons-round">settings</span>
+              </button>
             </div>
           </div>
+
+          <div class="search-section">
+            <div class="search-box">
+              <span class="material-icons-round">search</span>
+              <input type="text" id="user-search-input" placeholder="Search by ID or name...">
+              <button class="btn-search" id="search-btn">
+                <span class="material-icons-round">search</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="search-results" class="search-results hidden"></div>
+
+          <div class="conversations-list" id="conversations-list"></div>
         </div>
       </div>
 
-      <!-- Main Chat Area -->
-      <div class="messenger-main">
-        <!-- Empty State -->
-        <div id="chat-empty-state" class="chat-empty-state">
-          <div class="empty-icon">
-            <span class="material-icons-round">chat_bubble_outline</span>
-          </div>
-          <h3>Welcome to ncrypt</h3>
-          <p>Search for a user by ID or name to start a conversation.</p>
-        </div>
-
-        <!-- Active Chat -->
-        <div id="chat-active" class="chat-active hidden">
-          <!-- Chat Header -->
-          <div class="chat-header">
-            <div class="chat-user-info">
-              <div class="chat-avatar" id="chat-avatar">—</div>
-              <div class="chat-user-details">
-                <span class="chat-name" id="chat-name">—</span>
-                <span class="chat-status" id="chat-status">Online</span>
-              </div>
+      <!-- Chat Screen (Mobile: slides in when chat selected) -->
+      <div id="chat-screen" class="chat-screen hidden">
+        <div class="chat-header">
+          <button class="btn-icon" id="back-to-conversations">
+            <span class="material-icons-round">arrow_back</span>
+          </button>
+          <div class="chat-user-info">
+            <div class="chat-avatar" id="chat-avatar">—</div>
+            <div class="chat-user-details">
+              <span class="chat-name" id="chat-name">—</span>
+              <span class="chat-status" id="chat-status">Online</span>
             </div>
-            <button class="btn-icon" id="close-chat" title="Close conversation">
-              <span class="material-icons-round">close</span>
+          </div>
+          <div class="chat-header-actions">
+            <button class="btn-icon" id="chat-profile-btn">
+              <span class="material-icons-round">info</span>
             </button>
           </div>
+        </div>
 
-          <!-- Messages Container (Scrollable) -->
-          <div class="messages-container" id="messages-container">
-            <!-- Messages will be appended here -->
-          </div>
+        <div class="messages-container" id="messages-container"></div>
 
-          <!-- Message Input -->
-          <div class="message-input-container">
-            <form id="message-form" class="message-form">
-              <input type="text" id="message-input" class="message-input" 
-                placeholder="Type a message..." autocomplete="off">
-              <button type="submit" class="btn-send" id="send-message-btn">
-                <span class="material-icons-round">send</span>
-              </button>
-            </form>
-          </div>
+        <div class="message-input-container">
+          <form id="message-form" class="message-form">
+            <input type="text" id="message-input" class="message-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" class="btn-send" id="send-message-btn">
+              <span class="material-icons-round">send</span>
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -236,9 +169,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>Profile</h2>
-        <button class="btn-icon modal-close">
-          <span class="material-icons-round">close</span>
-        </button>
+        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <div class="profile-header">
@@ -249,19 +180,18 @@
             <p class="profile-id-label">ID: <span id="profile-id">—</span></p>
           </div>
         </div>
-        
         <div class="profile-actions">
           <button class="profile-action-btn" id="show-qr-btn">
             <span class="material-icons-round">qr_code</span>
-            <span>My QR Code</span>
+            <span>My QR</span>
           </button>
           <button class="profile-action-btn" id="scan-qr-btn">
             <span class="material-icons-round">qr_code_scanner</span>
-            <span>Scan QR</span>
+            <span>Scan</span>
           </button>
           <button class="profile-action-btn" id="upload-qr-btn">
             <span class="material-icons-round">upload</span>
-            <span>Upload QR</span>
+            <span>Upload</span>
           </button>
         </div>
       </div>
@@ -274,49 +204,16 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>Settings</h2>
-        <button class="btn-icon modal-close">
-          <span class="material-icons-round">close</span>
-        </button>
+        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <div class="settings-section">
-          <h3>Account</h3>
-          <div class="settings-item">
-            <div class="settings-item-info">
-              <span class="material-icons-round">person</span>
-              <div>
-                <p class="settings-label">Name</p>
-                <p id="settings-name">—</p>
-              </div>
-            </div>
-          </div>
-          <div class="settings-item">
-            <div class="settings-item-info">
-              <span class="material-icons-round">email</span>
-              <div>
-                <p class="settings-label">Email</p>
-                <p id="settings-email">—</p>
-              </div>
-            </div>
-          </div>
-          <div class="settings-item">
-            <div class="settings-item-info">
-              <span class="material-icons-round">badge</span>
-              <div>
-                <p class="settings-label">User ID</p>
-                <p id="settings-id" style="font-family: monospace; font-size: 12px;">—</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="settings-section">
-          <h3>Security</h3>
           <button class="settings-btn danger" id="settings-logout-btn">
             <span class="material-icons-round">logout</span>
             <span>Logout</span>
           </button>
         </div>
+        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0</p>
       </div>
     </div>
   </div>
@@ -327,18 +224,14 @@
     <div class="modal-container qr-modal">
       <div class="modal-header">
         <h2>My QR Code</h2>
-        <button class="btn-icon modal-close">
-          <span class="material-icons-round">close</span>
-        </button>
+        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body qr-body">
-        <div class="qr-container" id="qr-container">
-          <!-- QR Code will be generated here -->
-        </div>
-        <p class="qr-info">Scan this code to start a conversation with me</p>
+        <div class="qr-container" id="qr-container"></div>
+        <p class="qr-info">Scan to chat with me</p>
         <button class="btn-primary" id="download-qr-btn">
           <span class="material-icons-round">download</span>
-          Download QR Code
+          Download
         </button>
       </div>
     </div>
@@ -350,18 +243,14 @@
     <div class="modal-container scanner-modal">
       <div class="modal-header">
         <h2>Scan QR Code</h2>
-        <button class="btn-icon modal-close">
-          <span class="material-icons-round">close</span>
-        </button>
+        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body scanner-body">
         <div class="scanner-container">
           <video id="qr-video" autoplay playsinline></video>
-          <div class="scanner-overlay">
-            <div class="scanner-frame"></div>
-          </div>
+          <div class="scanner-overlay"><div class="scanner-frame"></div></div>
         </div>
-        <p class="scanner-info">Position the QR code within the frame</p>
+        <p class="scanner-info">Position QR code within frame</p>
         <div class="scanner-actions">
           <button class="btn-secondary" id="stop-scanner-btn">Cancel</button>
         </div>
@@ -369,13 +258,9 @@
     </div>
   </div>
 
-  <!-- Hidden file input for QR upload -->
   <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
-
-  <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/api.js"></script>

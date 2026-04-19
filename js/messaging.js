@@ -1,8 +1,7 @@
 // ============================================================
-//  MESSAGING - OPTIMIZED FOR SPEED
+//  MESSAGING - MOBILE OPTIMIZED
 // ============================================================
 
-// Initialize messenger
 function initializeMessenger() {
   if (!currentUser) return;
   
@@ -15,49 +14,44 @@ function initializeMessenger() {
   initSettings();
 }
 
-// Update sidebar user info
 function updateSidebarUserInfo() {
-  document.getElementById('sidebar-name').textContent = currentUser.name;
-  document.getElementById('sidebar-id').textContent = currentUser.id?.slice(0, 8) || '—';
-  document.getElementById('sidebar-avatar').textContent = getInitials(currentUser.name);
+  // No sidebar user info anymore - removed
 }
 
-// Load conversations
-async function loadConversations() {
-  const result = await getConversations();
-  
-  if (result.success) {
-    conversations = result.conversations || [];
-    renderConversationsList();
-  }
+function loadConversations() {
+  getConversations().then(result => {
+    if (result.success) {
+      conversations = result.conversations || [];
+      renderConversationsList();
+    }
+  });
 }
 
-// Render conversations list (optimized)
 function renderConversationsList() {
   const container = document.getElementById('conversations-list');
+  if (!container) return;
   
   if (!conversations.length) {
     container.innerHTML = `
-      <div class="no-results" style="padding: 32px 16px; text-align: center;">
-        <span class="material-icons-round" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;">chat</span>
-        <p style="color: var(--text-secondary); font-size: 14px;">No conversations yet</p>
-        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Search for a user to start chatting</p>
+      <div style="padding:32px 16px;text-align:center;">
+        <span class="material-icons-round" style="font-size:48px;color:var(--text-muted);margin-bottom:12px;">chat</span>
+        <p style="color:var(--text-secondary);">No conversations</p>
+        <p style="color:var(--text-muted);font-size:12px;margin-top:4px;">Search to start chatting</p>
       </div>
     `;
     return;
   }
   
-  const html = conversations.map(conv => {
+  container.innerHTML = conversations.map(conv => {
     const other = conv.otherUser || {};
     const last = conv.lastMessage || {};
-    const active = activeConversation?.conversationId === conv.conversationId;
     
     return `
-      <div class="conversation-item ${active ? 'active' : ''}" data-id="${conv.conversationId}">
+      <div class="conversation-item" data-id="${conv.conversationId}">
         <div class="conv-avatar">${getInitials(other.name)}</div>
         <div class="conv-info">
           <div class="conv-name">${escapeHtml(other.name || 'Unknown')}</div>
-          <div class="conv-last-message">${escapeHtml(last.content || '') || 'No messages'}</div>
+          <div class="conv-last-message">${escapeHtml(last.content || '')}</div>
         </div>
         <div class="conv-meta">
           <span class="conv-time">${formatDate(last.timestamp)}</span>
@@ -67,9 +61,6 @@ function renderConversationsList() {
     `;
   }).join('');
   
-  container.innerHTML = html;
-  
-  // Use event delegation instead of individual listeners
   container.querySelectorAll('.conversation-item').forEach(item => {
     item.addEventListener('click', () => {
       const conv = conversations.find(c => c.conversationId === item.dataset.id);
@@ -78,51 +69,56 @@ function renderConversationsList() {
   });
 }
 
-// Open a conversation
-async function openConversation(conversation) {
+// Cache for instant loading
+const messageCache = new Map();
+
+function openConversation(conversation) {
   activeConversation = conversation;
   
-  document.getElementById('chat-empty-state').classList.add('hidden');
-  document.getElementById('chat-active').classList.remove('hidden');
-  
+  // Update header
   const other = conversation.otherUser || {};
   document.getElementById('chat-avatar').textContent = getInitials(other.name);
   document.getElementById('chat-name').textContent = other.name || 'Unknown';
   
-  await loadMessages(conversation.conversationId);
-  renderConversationsList();
-  scrollToBottom();
+  // Check cache first
+  if (messageCache.has(conversation.conversationId)) {
+    renderMessagesFromCache(conversation.conversationId);
+  } else {
+    loadMessages(conversation.conversationId);
+  }
+  
+  // Navigate to chat screen
+  document.getElementById('conversations-screen').classList.add('hidden');
+  document.getElementById('chat-screen').classList.remove('hidden');
   document.getElementById('message-input').focus();
 }
 
-// Load messages
-async function loadMessages(conversationId) {
-  const result = await getMessages(conversationId);
-  
-  if (result.success) {
-    messagesCache.set(conversationId, result.messages || []);
-    renderMessages(conversationId);
-  }
+function renderMessagesFromCache(conversationId) {
+  const messages = messageCache.get(conversationId) || [];
+  renderMessagesArray(messages);
 }
 
-// Render messages (optimized)
-function renderMessages(conversationId) {
+function loadMessages(conversationId) {
+  getMessages(conversationId).then(result => {
+    if (result.success) {
+      messageCache.set(conversationId, result.messages || []);
+      renderMessagesArray(result.messages || []);
+    }
+  });
+}
+
+function renderMessagesArray(messages) {
   const container = document.getElementById('messages-container');
-  const messages = messagesCache.get(conversationId) || [];
   
   if (!messages.length) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-        <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px;">chat_bubble_outline</span>
-        <p>No messages yet. Say hello! 👋</p>
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">
+        <span class="material-icons-round" style="font-size:48px;margin-bottom:12px;">chat_bubble_outline</span>
+        <p>Say hello! 👋</p>
       </div>
     `;
     return;
   }
-  
-  // Use DocumentFragment for better performance
-  const fragment = document.createDocumentFragment();
-  const tempDiv = document.createElement('div');
   
   let html = '';
   let lastDate = '';
@@ -131,7 +127,11 @@ function renderMessages(conversationId) {
     const msgDate = new Date(msg.timestamp).toDateString();
     if (msgDate !== lastDate) {
       lastDate = msgDate;
-      html += `<div class="message-date-separator"><span>${getDateLabel(msg.timestamp)}</span></div>`;
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      let label = msgDate === today ? 'Today' : msgDate === yesterday ? 'Yesterday' : 
+        new Date(msg.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      html += `<div class="message-date-separator"><span>${label}</span></div>`;
     }
     
     const isOutgoing = msg.senderId === currentUser.id;
@@ -145,119 +145,59 @@ function renderMessages(conversationId) {
     `;
   });
   
-  tempDiv.innerHTML = html;
-  while (tempDiv.firstChild) {
-    fragment.appendChild(tempDiv.firstChild);
-  }
-  
-  container.innerHTML = '';
-  container.appendChild(fragment);
-  scrollToBottom();
+  container.innerHTML = html;
+  setTimeout(() => container.scrollTop = container.scrollHeight, 50);
 }
 
-// Get date label
-function getDateLabel(timestamp) {
-  const date = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// Send message - OPTIMIZED FOR INSTANT FEEL
-async function handleSendMessage(e) {
+function handleSendMessage(e) {
   e.preventDefault();
   
   const input = document.getElementById('message-input');
   const content = input.value.trim();
-  
   if (!content || !activeConversation) return;
   
-  // Clear input immediately for instant feel
   input.value = '';
   
-  // Create optimistic message
-  const tempId = 'temp_' + Date.now();
-  const tempMessage = {
-    id: tempId,
+  // Optimistic update
+  const tempMsg = {
+    id: 'temp_' + Date.now(),
     conversationId: activeConversation.conversationId,
     senderId: currentUser.id,
     content: content,
-    timestamp: new Date().toISOString(),
-    read: false,
-    pending: true
+    timestamp: new Date().toISOString()
   };
   
-  // Add to cache and render immediately
-  const messages = messagesCache.get(activeConversation.conversationId) || [];
-  messages.push(tempMessage);
-  messagesCache.set(activeConversation.conversationId, messages);
-  renderMessages(activeConversation.conversationId);
+  const cached = messageCache.get(activeConversation.conversationId) || [];
+  cached.push(tempMsg);
+  messageCache.set(activeConversation.conversationId, cached);
+  renderMessagesArray(cached);
   
-  // Update conversations list optimistically
-  updateConversationLastMessage(activeConversation.conversationId, content);
-  
-  // Send in background
-  sendMessageAsync(activeConversation.conversationId, content, tempId);
-}
-
-// Update conversation last message optimistically
-function updateConversationLastMessage(convId, content) {
-  const conv = conversations.find(c => c.conversationId === convId);
+  // Update conversation list
+  const conv = conversations.find(c => c.conversationId === activeConversation.conversationId);
   if (conv) {
-    conv.lastMessage = {
-      content: content,
-      timestamp: new Date().toISOString()
-    };
-    conv.updatedAt = new Date().toISOString();
+    conv.lastMessage = { content, timestamp: new Date().toISOString() };
     renderConversationsList();
   }
-}
-
-// Send message async
-async function sendMessageAsync(conversationId, content, tempId) {
-  try {
-    const result = await sendMessage(conversationId, content);
-    
+  
+  // Send to server
+  sendMessage(activeConversation.conversationId, content).then(result => {
     if (result.success) {
-      // Replace temp message with real one
-      const messages = messagesCache.get(conversationId) || [];
-      const index = messages.findIndex(m => m.id === tempId);
-      if (index !== -1) {
-        messages[index] = { ...result.message, pending: false };
-        messagesCache.set(conversationId, messages);
-        renderMessages(conversationId);
-      }
-      
-      // Refresh conversations
-      await loadConversations();
-    } else {
-      // Mark as failed
-      const messages = messagesCache.get(conversationId) || [];
-      const index = messages.findIndex(m => m.id === tempId);
-      if (index !== -1) {
-        messages[index].failed = true;
-        messagesCache.set(conversationId, messages);
-        renderMessages(conversationId);
-      }
-      toast('Failed to send', 'error');
+      const idx = cached.findIndex(m => m.id === tempMsg.id);
+      if (idx !== -1) cached[idx] = result.message;
+      messageCache.set(activeConversation.conversationId, cached);
+      renderMessagesArray(cached);
+      loadConversations();
     }
-  } catch (err) {
-    console.error('Send error:', err);
-    const messages = messagesCache.get(conversationId) || [];
-    const index = messages.findIndex(m => m.id === tempId);
-    if (index !== -1) {
-      messages[index].failed = true;
-      messagesCache.set(conversationId, messages);
-      renderMessages(conversationId);
-    }
-  }
+  });
 }
 
-// Search users
+function goBackToConversations() {
+  document.getElementById('chat-screen').classList.add('hidden');
+  document.getElementById('conversations-screen').classList.remove('hidden');
+  activeConversation = null;
+  renderConversationsList();
+}
+
 async function handleUserSearch(query) {
   if (!query || query.length < 2) {
     document.getElementById('search-results').classList.add('hidden');
@@ -267,7 +207,7 @@ async function handleUserSearch(query) {
   const result = await searchUsers(query);
   const container = document.getElementById('search-results');
   
-  if (!result.success || !result.users?.length) {
+  if (!result.users?.length) {
     container.innerHTML = '<div class="no-results">No users found</div>';
     container.classList.remove('hidden');
     return;
@@ -278,7 +218,7 @@ async function handleUserSearch(query) {
       <div class="search-result-avatar">${getInitials(user.name)}</div>
       <div class="search-result-info">
         <div class="search-result-name">${escapeHtml(user.name)}</div>
-        <div class="search-result-id">${user.id?.slice(0, 12) || '—'}</div>
+        <div class="search-result-id">${user.id?.slice(0,12)}</div>
       </div>
     </div>
   `).join('');
@@ -287,71 +227,32 @@ async function handleUserSearch(query) {
   
   container.querySelectorAll('.search-result-item').forEach(item => {
     item.addEventListener('click', async () => {
-      await startConversationWithUser(item.dataset.id);
       container.classList.add('hidden');
       document.getElementById('user-search-input').value = '';
+      
+      const result = await getOrCreateConversation(item.dataset.id);
+      if (result.success && result.conversation) {
+        if (!conversations.find(c => c.conversationId === result.conversation.conversationId)) {
+          conversations.unshift(result.conversation);
+        }
+        openConversation(result.conversation);
+        renderConversationsList();
+      }
     });
   });
 }
 
-// Start conversation with user
-async function startConversationWithUser(userId) {
-  const result = await getOrCreateConversation(userId);
-  
-  if (result.success && result.conversation) {
-    if (!conversations.find(c => c.conversationId === result.conversation.conversationId)) {
-      conversations.unshift(result.conversation);
-    }
-    openConversation(result.conversation);
-    renderConversationsList();
-  } else {
-    toast('Failed to start chat', 'error');
-  }
-}
-
-// Close chat
-function closeChat() {
-  activeConversation = null;
-  document.getElementById('chat-empty-state').classList.remove('hidden');
-  document.getElementById('chat-active').classList.add('hidden');
-  renderConversationsList();
-}
-
-// Scroll to bottom
-function scrollToBottom() {
-  requestAnimationFrame(() => {
-    const container = document.getElementById('messages-container');
-    if (container) container.scrollTop = container.scrollHeight;
-  });
-}
-
-// Escape HTML
-function escapeHtml(text) {
-  if (!text) return '';
-  return text.replace(/[&<>"']/g, (char) => {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    return map[char];
-  });
-}
-
-// Setup events
 function setupMessengerEvents() {
   const searchInput = document.getElementById('user-search-input');
+  let debounce;
   
   searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => handleUserSearch(e.target.value.trim()), 250);
+    clearTimeout(debounce);
+    debounce = setTimeout(() => handleUserSearch(e.target.value.trim()), 200);
   });
   
   document.getElementById('search-btn').addEventListener('click', () => {
     handleUserSearch(searchInput.value.trim());
-  });
-  
-  searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleUserSearch(searchInput.value.trim());
-    }
   });
   
   document.addEventListener('click', (e) => {
@@ -361,51 +262,41 @@ function setupMessengerEvents() {
   });
   
   document.getElementById('message-form').addEventListener('submit', handleSendMessage);
-  document.getElementById('close-chat').addEventListener('click', closeChat);
+  document.getElementById('back-to-conversations').addEventListener('click', goBackToConversations);
 }
 
-// Message polling (lighter)
 function startMessagePolling() {
-  stopMessagePolling();
-  
-  messagePollingInterval = setInterval(async () => {
+  setInterval(async () => {
     if (!currentUser) return;
-    
     await loadConversations();
     
     if (activeConversation) {
       const result = await getMessages(activeConversation.conversationId);
       if (result.success) {
-        const current = messagesCache.get(activeConversation.conversationId) || [];
-        const fresh = result.messages || [];
-        
-        // Only update if new messages and no pending ones
-        const hasPending = current.some(m => m.pending);
-        if (fresh.length > current.length && !hasPending) {
-          messagesCache.set(activeConversation.conversationId, fresh);
-          renderMessages(activeConversation.conversationId);
+        const cached = messageCache.get(activeConversation.conversationId) || [];
+        if (result.messages.length > cached.length) {
+          messageCache.set(activeConversation.conversationId, result.messages);
+          renderMessagesArray(result.messages);
         }
       }
     }
-  }, 2000); // Faster polling
+  }, 2000);
 }
 
-function stopMessagePolling() {
-  if (messagePollingInterval) {
-    clearInterval(messagePollingInterval);
-    messagePollingInterval = null;
-  }
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 }
 
-// Cleanup
-window.addEventListener('beforeunload', () => {
-  stopMessagePolling();
-  if (typeof qrStream !== 'undefined' && qrStream) {
-    qrStream.getTracks().forEach(t => t.stop());
-  }
-});
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
-// Exports
-window.openConversation = openConversation;
-window.closeChat = closeChat;
-window.renderConversationsList = renderConversationsList;
+function formatMessageTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
