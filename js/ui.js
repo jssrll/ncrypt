@@ -4,8 +4,7 @@
 
 // Initialize app
 function init() {
-  // Load saved data
-  SCRIPT_URL = localStorage.getItem('ncrypt_url') || '';
+  // Load saved user
   const savedUser = localStorage.getItem('ncrypt_user');
   
   if (savedUser) {
@@ -23,9 +22,8 @@ function init() {
   setTimeout(() => {
     fadeOutLoader();
     
-    if (!SCRIPT_URL) {
-      showScreen('setup');
-    } else if (currentUser) {
+    // Skip setup screen since URL is hardcoded
+    if (currentUser) {
       showScreen('app');
       initializeMessenger();
     } else {
@@ -45,10 +43,14 @@ function fadeOutLoader() {
 
 // Show specific screen
 function showScreen(screenName) {
-  ['setup', 'auth', 'app'].forEach(name => {
+  ['auth', 'app'].forEach(name => {
     document.getElementById(`${name}-screen`).classList.add('hidden');
   });
   document.getElementById(`${screenName}-screen`).classList.remove('hidden');
+  
+  // Setup screen is never shown now
+  const setupScreen = document.getElementById('setup-screen');
+  if (setupScreen) setupScreen.classList.add('hidden');
 }
 
 // Start app

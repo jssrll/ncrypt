@@ -4,9 +4,6 @@
 
 // Initialize auth event listeners
 function initAuth() {
-  // Setup form
-  document.getElementById('setup-form').addEventListener('submit', handleSetup);
-  
   // Tab switching
   document.querySelectorAll('.auth-tab').forEach(tab => {
     tab.addEventListener('click', () => switchAuthTab(tab.dataset.tab));
@@ -31,25 +28,6 @@ function initAuth() {
   
   // Register form
   document.getElementById('register-form').addEventListener('submit', handleRegister);
-  
-  // Change script URL
-  document.getElementById('change-script-link').addEventListener('click', changeScriptUrl);
-}
-
-// Handle setup form submission
-function handleSetup(e) {
-  e.preventDefault();
-  const url = document.getElementById('script-url-input').value.trim();
-  
-  if (!url.startsWith('https://script.google.com')) {
-    toast('Please enter a valid Apps Script URL.', 'error');
-    return;
-  }
-  
-  SCRIPT_URL = url;
-  localStorage.setItem('ncrypt_url', url);
-  toast('Connected successfully!', 'success');
-  setTimeout(() => showScreen('auth'), 700);
 }
 
 // Switch between login and register tabs
@@ -110,7 +88,7 @@ async function handleLogin(e) {
   
   try {
     const hash = await sha256(password);
-    const result = await callAPI({ action: 'login', email, password: hash });
+    const result = await loginUser(email, hash);
     
     if (result.success) {
       currentUser = result.user;
@@ -122,7 +100,7 @@ async function handleLogin(e) {
       toast(result.message || 'Invalid email or password.', 'error');
     }
   } catch (err) {
-    toast('Connection failed — check your Script URL.', 'error');
+    toast('Connection failed — check your internet connection.', 'error');
     console.error('Login error:', err);
   } finally {
     setBtnLoading(btn, false, 'Sign In');
@@ -163,7 +141,7 @@ async function handleRegister(e) {
   
   try {
     const hash = await sha256(password);
-    const result = await callAPI({ action: 'register', name, email, password: hash });
+    const result = await registerUser(name, email, hash);
     
     if (result.success) {
       toast('Account created! Please sign in.', 'success');
@@ -174,23 +152,11 @@ async function handleRegister(e) {
       toast(result.message || 'Registration failed.', 'error');
     }
   } catch (err) {
-    toast('Connection failed — check your Script URL.', 'error');
+    toast('Connection failed — check your internet connection.', 'error');
     console.error('Register error:', err);
   } finally {
     setBtnLoading(btn, false, 'Create Account');
   }
-}
-
-// Change script URL
-function changeScriptUrl() {
-  if (!confirm('This will log you out and reset the backend URL. Continue?')) return;
-  
-  currentUser = null;
-  localStorage.removeItem('ncrypt_user');
-  localStorage.removeItem('ncrypt_url');
-  SCRIPT_URL = '';
-  document.getElementById('script-url-input').value = '';
-  showScreen('setup');
 }
 
 // Logout

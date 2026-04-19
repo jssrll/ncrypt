@@ -20,35 +20,6 @@
     <p class="loading-text">Initializing ncrypt<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
   </div>
 
-  <!-- Setup Screen -->
-  <div id="setup-screen" class="hidden">
-    <div class="screen-container">
-      <div class="setup-card">
-        <div class="brand-row">
-          <div class="brand-icon">
-            <span class="material-icons-round">chat</span>
-          </div>
-          <span class="brand-name">ncrypt</span>
-        </div>
-
-        <h2>Connect Backend</h2>
-        <p>Enter your Google Apps Script Web App URL to connect the messaging backend.</p>
-
-        <form id="setup-form">
-          <div class="input-group">
-            <label for="script-url-input">Apps Script Web App URL</label>
-            <input type="url" id="script-url-input" class="text-input"
-              placeholder="https://script.google.com/macros/s/.../exec" required>
-          </div>
-          <button type="submit" class="btn-primary" id="setup-btn">
-            <span class="material-icons-round">link</span>
-            Connect & Continue
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Auth Screen -->
   <div id="auth-screen" class="hidden">
     <div class="screen-container auth-screen-bg">
@@ -152,10 +123,6 @@
               Already registered? <a data-tab="login">Sign in</a>
             </p>
           </form>
-        </div>
-
-        <div class="auth-meta">
-          <a id="change-script-link">⚙ Change Backend URL</a>
         </div>
       </div>
     </div>

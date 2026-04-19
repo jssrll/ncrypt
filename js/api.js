@@ -4,7 +4,7 @@
 
 // Call Google Apps Script API
 async function callAPI(payload) {
-  if (!SCRIPT_URL) {
+  if (typeof SCRIPT_URL === 'undefined' || !SCRIPT_URL) {
     throw new Error('Script URL not configured');
   }
   
@@ -105,5 +105,36 @@ async function sendMessage(conversationId, content) {
   } catch (err) {
     console.error('Send message error:', err);
     return { success: false };
+  }
+}
+
+// Login user
+async function loginUser(email, passwordHash) {
+  try {
+    const result = await callAPI({
+      action: 'login',
+      email,
+      password: passwordHash
+    });
+    return result;
+  } catch (err) {
+    console.error('Login error:', err);
+    throw err;
+  }
+}
+
+// Register user
+async function registerUser(name, email, passwordHash) {
+  try {
+    const result = await callAPI({
+      action: 'register',
+      name,
+      email,
+      password: passwordHash
+    });
+    return result;
+  } catch (err) {
+    console.error('Register error:', err);
+    throw err;
   }
 }
