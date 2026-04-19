@@ -7,6 +7,9 @@ function initProfile() {
   // Profile button
   document.getElementById('sidebar-profile').addEventListener('click', openProfileModal);
   
+  // Click on sidebar user info also opens profile
+  document.getElementById('sidebar-user-info').addEventListener('click', openProfileModal);
+  
   // QR code buttons
   document.getElementById('show-qr-btn').addEventListener('click', showQRCode);
   document.getElementById('scan-qr-btn').addEventListener('click', startQRScannerFlow);
@@ -45,22 +48,35 @@ function openProfileModal() {
 // Show QR code
 function showQRCode() {
   closeModal('profile-modal');
-  generateUserQRCode();
   openModal('qr-modal');
+  
+  // Generate QR code after modal is visible
+  setTimeout(() => {
+    generateUserQRCode();
+  }, 100);
 }
 
 // Start QR scanner flow
 async function startQRScannerFlow() {
   closeModal('profile-modal');
   
-  try {
-    await loadQRScannerLibrary();
-    openModal('scanner-modal');
-    await startQRScanner();
-  } catch (err) {
-    console.error('Failed to load QR scanner:', err);
-    toast('Failed to load QR scanner', 'error');
+  // Check if jsQR is loaded
+  if (typeof jsQR === 'undefined') {
+    toast('Loading QR scanner...', 'info');
+    // Wait a bit and try again
+    setTimeout(() => {
+      if (typeof jsQR !== 'undefined') {
+        openModal('scanner-modal');
+        startQRScanner();
+      } else {
+        toast('Failed to load QR scanner. Please refresh.', 'error');
+      }
+    }, 500);
+    return;
   }
+  
+  openModal('scanner-modal');
+  await startQRScanner();
 }
 
 // Trigger QR file upload

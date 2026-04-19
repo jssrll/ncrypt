@@ -108,6 +108,9 @@ async function openConversation(conversation) {
   
   // Scroll to bottom
   scrollToBottom();
+  
+  // Focus on message input
+  document.getElementById('message-input').focus();
 }
 
 // Load messages for conversation
@@ -135,20 +138,68 @@ function renderMessages(conversationId) {
     return;
   }
   
-  container.innerHTML = messages.map(msg => {
-    const isOutgoing = msg.senderId === currentUser.id;
-    
-    return `
-      <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
-        <div class="message-bubble">
-          ${escapeHtml(msg.content)}
-          <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-        </div>
+  // Group messages by date
+  const groupedMessages = groupMessagesByDate(messages);
+  let html = '';
+  
+  for (const [date, msgs] of groupedMessages) {
+    // Add date separator
+    html += `
+      <div class="message-date-separator">
+        <span>${date}</span>
       </div>
     `;
-  }).join('');
+    
+    // Add messages
+    msgs.forEach(msg => {
+      const isOutgoing = msg.senderId === currentUser.id;
+      
+      html += `
+        <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
+          <div class="message-bubble">
+            ${escapeHtml(msg.content)}
+            <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+  
+  container.innerHTML = html;
   
   scrollToBottom();
+}
+
+// Group messages by date
+function groupMessagesByDate(messages) {
+  const groups = new Map();
+  
+  messages.forEach(msg => {
+    const date = new Date(msg.timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    let dateLabel;
+    if (date.toDateString() === today.toDateString()) {
+      dateLabel = 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      dateLabel = 'Yesterday';
+    } else {
+      dateLabel = date.toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
+      });
+    }
+    
+    if (!groups.has(dateLabel)) {
+      groups.set(dateLabel, []);
+    }
+    groups.get(dateLabel).push(msg);
+  });
+  
+  return groups;
 }
 
 // Send a message
@@ -187,6 +238,7 @@ async function handleSendMessage(e) {
     toast('Failed to send message.', 'error');
   } finally {
     btn.disabled = false;
+    input.focus();
   }
 }
 
@@ -260,11 +312,13 @@ function closeChat() {
 function scrollToBottom() {
   const container = document.getElementById('messages-container');
   setTimeout(() => {
-    container.scrollTop = container.scrollHeight;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, 50);
 }
 
-// Escape HTML
+// Escape HTML to prevent XSS
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');
@@ -305,11 +359,23 @@ function setupMessengerEvents() {
     }
   });
   
+  // Prevent search results from closing when clicking inside
+  document.getElementById('search-results').addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+  
   // Message form
   document.getElementById('message-form').addEventListener('submit', handleSendMessage);
   
   // Close chat
   document.getElementById('close-chat').addEventListener('click', closeChat);
+  
+  // Mobile back button (if applicable)
+  window.addEventListener('popstate', (e) => {
+    if (activeConversation) {
+      closeChat();
+    }
+  });
 }
 
 // Start polling for new messages
@@ -334,18 +400,55 @@ function startMessagePolling() {
           messagesCache.set(activeConversation.conversationId, newMessages);
           renderMessages(activeConversation.conversationId);
           
-          // Show notification if enabled
-          const notifEnabled = localStorage.getItem('ncrypt_notifications') !== 'false';
-          if (notifEnabled && newMessages.length > currentMessages.length) {
-            const lastMsg = newMessages[newMessages.length - 1];
-            if (lastMsg.senderId !== currentUser.id) {
-              toast('New message received', 'info');
+          // Show notification for new incoming messages
+          const lastMsg = newMessages[newMessages.length - 1];
+          if (lastMsg && lastMsg.senderId !== currentUser.id) {
+            // Check if the chat is currently visible
+            const container = document.getElementById('messages-container');
+            const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+            
+            if (!isNearBottom) {
+              // Show new message indicator
+              showNewMessageIndicator();
             }
+            
+            // Play notification sound (optional)
+            // playMessageSound();
           }
         }
       }
     }
   }, 3000);
+}
+
+// Show new message indicator
+function showNewMessageIndicator() {
+  const container = document.getElementById('messages-container');
+  const existingIndicator = container.querySelector('.new-message-indicator');
+  
+  if (existingIndicator) return;
+  
+  const indicator = document.createElement('div');
+  indicator.className = 'new-message-indicator';
+  indicator.innerHTML = `
+    <span class="material-icons-round">arrow_downward</span>
+    <span>New messages</span>
+  `;
+  indicator.addEventListener('click', scrollToBottom);
+  
+  container.appendChild(indicator);
+  
+  // Auto-hide after scrolling
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        indicator.remove();
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(container.lastElementChild);
 }
 
 // Stop message polling
@@ -355,3 +458,16 @@ function stopMessagePolling() {
     messagePollingInterval = null;
   }
 }
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  stopMessagePolling();
+  if (qrStream) {
+    qrStream.getTracks().forEach(track => track.stop());
+  }
+});
+
+// Export functions for global use (if needed)
+window.openConversation = openConversation;
+window.closeChat = closeChat;
+window.renderConversationsList = renderConversationsList;

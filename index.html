@@ -9,8 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <!-- QR Code Library -->
+  <!-- QR Code Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
 
@@ -172,7 +173,7 @@
 
         <!-- User Info Footer -->
         <div class="sidebar-footer">
-          <div class="current-user-info">
+          <div class="current-user-info" id="sidebar-user-info" style="cursor: pointer;">
             <div class="user-avatar" id="sidebar-avatar">—</div>
             <div class="user-details">
               <span class="user-name" id="sidebar-name">—</span>
@@ -298,31 +299,19 @@
               </div>
             </div>
           </div>
-        </div>
-        
-        <div class="settings-section">
-          <h3>Preferences</h3>
           <div class="settings-item">
             <div class="settings-item-info">
-              <span class="material-icons-round">notifications</span>
+              <span class="material-icons-round">badge</span>
               <div>
-                <p class="settings-label">Notifications</p>
-                <p class="settings-desc">Enable message notifications</p>
+                <p class="settings-label">User ID</p>
+                <p id="settings-id" style="font-family: monospace; font-size: 12px;">—</p>
               </div>
             </div>
-            <label class="switch">
-              <input type="checkbox" id="notifications-toggle" checked>
-              <span class="slider"></span>
-            </label>
           </div>
         </div>
         
         <div class="settings-section">
           <h3>Security</h3>
-          <button class="settings-btn" id="change-password-btn">
-            <span class="material-icons-round">lock</span>
-            <span>Change Password</span>
-          </button>
           <button class="settings-btn danger" id="settings-logout-btn">
             <span class="material-icons-round">logout</span>
             <span>Logout</span>
@@ -343,8 +332,8 @@
         </button>
       </div>
       <div class="modal-body qr-body">
-        <div class="qr-container">
-          <canvas id="qr-canvas"></canvas>
+        <div class="qr-container" id="qr-container">
+          <!-- QR Code will be generated here -->
         </div>
         <p class="qr-info">Scan this code to start a conversation with me</p>
         <button class="btn-primary" id="download-qr-btn">
@@ -367,7 +356,7 @@
       </div>
       <div class="modal-body scanner-body">
         <div class="scanner-container">
-          <video id="qr-video"></video>
+          <video id="qr-video" autoplay playsinline></video>
           <div class="scanner-overlay">
             <div class="scanner-frame"></div>
           </div>
