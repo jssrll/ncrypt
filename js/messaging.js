@@ -6,7 +6,7 @@
 function initializeMessenger() {
   if (!currentUser) return;
   
-  // Update sidebar user info
+  // Update sidebar user info (remove @ symbol)
   updateSidebarUserInfo();
   
   // Load conversations
@@ -17,12 +17,16 @@ function initializeMessenger() {
   
   // Start polling for new messages
   startMessagePolling();
+  
+  // Initialize profile and settings
+  initProfile();
+  initSettings();
 }
 
-// Update sidebar user info
+// Update sidebar user info (without @ symbol)
 function updateSidebarUserInfo() {
   document.getElementById('sidebar-name').textContent = currentUser.name;
-  document.getElementById('sidebar-id').textContent = `@${currentUser.id?.slice(0, 8) || '—'}`;
+  document.getElementById('sidebar-id').textContent = currentUser.id?.slice(0, 8) || '—';
   document.getElementById('sidebar-avatar').textContent = getInitials(currentUser.name);
 }
 
@@ -60,8 +64,8 @@ function renderConversationsList() {
       <div class="conversation-item ${isActive ? 'active' : ''}" data-conversation-id="${conv.conversationId}">
         <div class="conv-avatar">${getInitials(otherUser.name)}</div>
         <div class="conv-info">
-          <div class="conv-name">${otherUser.name || 'Unknown'}</div>
-          <div class="conv-last-message">${lastMessage.content || 'No messages yet'}</div>
+          <div class="conv-name">${escapeHtml(otherUser.name || 'Unknown')}</div>
+          <div class="conv-last-message">${escapeHtml(lastMessage.content || 'No messages yet')}</div>
         </div>
         <div class="conv-meta">
           <span class="conv-time">${formatDate(lastMessage.timestamp)}</span>
@@ -186,7 +190,7 @@ async function handleSendMessage(e) {
   }
 }
 
-// Search users
+// Search users (triggered by button or debounced input)
 async function handleUserSearch(query) {
   if (!query || query.length < 2) {
     document.getElementById('search-results').classList.add('hidden');
@@ -207,7 +211,7 @@ async function handleUserSearch(query) {
       <div class="search-result-avatar">${getInitials(user.name)}</div>
       <div class="search-result-info">
         <div class="search-result-name">${escapeHtml(user.name)}</div>
-        <div class="search-result-id">@${user.id?.slice(0, 12) || '—'}</div>
+        <div class="search-result-id">${user.id?.slice(0, 12) || '—'}</div>
       </div>
     </div>
   `).join('');
@@ -262,6 +266,7 @@ function scrollToBottom() {
 
 // Escape HTML
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
@@ -269,13 +274,28 @@ function escapeHtml(text) {
 
 // Setup messenger event listeners
 function setupMessengerEvents() {
-  // User search
+  // User search input (debounced)
   const searchInput = document.getElementById('user-search-input');
   searchInput.addEventListener('input', (e) => {
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => {
       handleUserSearch(e.target.value.trim());
     }, 300);
+  });
+  
+  // Search button
+  document.getElementById('search-btn').addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    handleUserSearch(query);
+  });
+  
+  // Press Enter in search input
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = searchInput.value.trim();
+      handleUserSearch(query);
+    }
   });
   
   // Hide search results when clicking outside
@@ -290,9 +310,6 @@ function setupMessengerEvents() {
   
   // Close chat
   document.getElementById('close-chat').addEventListener('click', closeChat);
-  
-  // Logout
-  document.getElementById('sidebar-logout').addEventListener('click', logout);
 }
 
 // Start polling for new messages
@@ -316,6 +333,15 @@ function startMessagePolling() {
         if (newMessages.length > currentMessages.length) {
           messagesCache.set(activeConversation.conversationId, newMessages);
           renderMessages(activeConversation.conversationId);
+          
+          // Show notification if enabled
+          const notifEnabled = localStorage.getItem('ncrypt_notifications') !== 'false';
+          if (notifEnabled && newMessages.length > currentMessages.length) {
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg.senderId !== currentUser.id) {
+              toast('New message received', 'info');
+            }
+          }
         }
       }
     }

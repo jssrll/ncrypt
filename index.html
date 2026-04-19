@@ -9,6 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -139,9 +141,14 @@
             <span class="material-icons-round">chat</span>
             <span>ncrypt</span>
           </div>
-          <button class="btn-icon" id="sidebar-logout" title="Logout">
-            <span class="material-icons-round">logout</span>
-          </button>
+          <div class="sidebar-header-actions">
+            <button class="btn-icon" id="sidebar-profile" title="Profile">
+              <span class="material-icons-round">person</span>
+            </button>
+            <button class="btn-icon" id="sidebar-settings" title="Settings">
+              <span class="material-icons-round">settings</span>
+            </button>
+          </div>
         </div>
 
         <!-- Search Users -->
@@ -149,6 +156,9 @@
           <div class="search-box">
             <span class="material-icons-round">search</span>
             <input type="text" id="user-search-input" placeholder="Search users by ID or name...">
+            <button class="btn-search" id="search-btn">
+              <span class="material-icons-round">search</span>
+            </button>
           </div>
         </div>
 
@@ -199,7 +209,7 @@
             </button>
           </div>
 
-          <!-- Messages Container -->
+          <!-- Messages Container (Scrollable) -->
           <div class="messages-container" id="messages-container">
             <!-- Messages will be appended here -->
           </div>
@@ -219,6 +229,160 @@
     </div>
   </div>
 
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Profile</h2>
+        <button class="btn-icon modal-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="profile-header">
+          <div class="profile-avatar-large" id="profile-avatar">—</div>
+          <div class="profile-info">
+            <h3 id="profile-name">—</h3>
+            <p id="profile-email">—</p>
+            <p class="profile-id-label">ID: <span id="profile-id">—</span></p>
+          </div>
+        </div>
+        
+        <div class="profile-actions">
+          <button class="profile-action-btn" id="show-qr-btn">
+            <span class="material-icons-round">qr_code</span>
+            <span>My QR Code</span>
+          </button>
+          <button class="profile-action-btn" id="scan-qr-btn">
+            <span class="material-icons-round">qr_code_scanner</span>
+            <span>Scan QR</span>
+          </button>
+          <button class="profile-action-btn" id="upload-qr-btn">
+            <span class="material-icons-round">upload</span>
+            <span>Upload QR</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-icon modal-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>Account</h3>
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <span class="material-icons-round">person</span>
+              <div>
+                <p class="settings-label">Name</p>
+                <p id="settings-name">—</p>
+              </div>
+            </div>
+          </div>
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <span class="material-icons-round">email</span>
+              <div>
+                <p class="settings-label">Email</p>
+                <p id="settings-email">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>Preferences</h3>
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <span class="material-icons-round">notifications</span>
+              <div>
+                <p class="settings-label">Notifications</p>
+                <p class="settings-desc">Enable message notifications</p>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="notifications-toggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>Security</h3>
+          <button class="settings-btn" id="change-password-btn">
+            <span class="material-icons-round">lock</span>
+            <span>Change Password</span>
+          </button>
+          <button class="settings-btn danger" id="settings-logout-btn">
+            <span class="material-icons-round">logout</span>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container qr-modal">
+      <div class="modal-header">
+        <h2>My QR Code</h2>
+        <button class="btn-icon modal-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body qr-body">
+        <div class="qr-container">
+          <canvas id="qr-canvas"></canvas>
+        </div>
+        <p class="qr-info">Scan this code to start a conversation with me</p>
+        <button class="btn-primary" id="download-qr-btn">
+          <span class="material-icons-round">download</span>
+          Download QR Code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div id="scanner-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container scanner-modal">
+      <div class="modal-header">
+        <h2>Scan QR Code</h2>
+        <button class="btn-icon modal-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body scanner-body">
+        <div class="scanner-container">
+          <video id="qr-video"></video>
+          <div class="scanner-overlay">
+            <div class="scanner-frame"></div>
+          </div>
+        </div>
+        <p class="scanner-info">Position the QR code within the frame</p>
+        <div class="scanner-actions">
+          <button class="btn-secondary" id="stop-scanner-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for QR upload -->
+  <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -228,6 +392,9 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/messaging.js"></script>
+  <script src="js/qrcode.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
