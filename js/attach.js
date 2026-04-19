@@ -93,16 +93,10 @@ function initAttach() {
     document.getElementById('file-input-video').click();
   });
 
-  document.getElementById('attach-capture')?.addEventListener('click', () => {
-    closeAttachMenu();
-    document.getElementById('file-input-capture').click();
-  });
-
   // File input handlers
   document.getElementById('file-input-file')?.addEventListener('change', e => handleFileUpload(e, 'file'));
   document.getElementById('file-input-image')?.addEventListener('change', e => handleFileUpload(e, 'image'));
   document.getElementById('file-input-video')?.addEventListener('change', e => handleFileUpload(e, 'video'));
-  document.getElementById('file-input-capture')?.addEventListener('change', e => handleFileUpload(e, 'image'));
 
   // Voice modal
   document.getElementById('voice-record-btn')?.addEventListener('click', toggleVoiceRecording);
@@ -308,7 +302,7 @@ function stopVoiceRecording() {
   isRecording = false;
 }
 
-// ── FIXED: Voice now uploads to Drive, no more blob URLs ─────
+// ── Voice upload to Drive ──────────────────────────────────────
 async function sendVoiceMessage() {
   if (!recordedBlob || !activeConversation) return;
 
