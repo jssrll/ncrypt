@@ -1,29 +1,21 @@
 // ============================================================
-//  MESSAGING & CONVERSATION LOGIC
+//  MESSAGING - OPTIMIZED FOR SPEED
 // ============================================================
 
 // Initialize messenger
 function initializeMessenger() {
   if (!currentUser) return;
   
-  // Update sidebar user info (remove @ symbol)
   updateSidebarUserInfo();
-  
-  // Load conversations
   loadConversations();
-  
-  // Set up event listeners
   setupMessengerEvents();
-  
-  // Start polling for new messages
   startMessagePolling();
   
-  // Initialize profile and settings
   initProfile();
   initSettings();
 }
 
-// Update sidebar user info (without @ symbol)
+// Update sidebar user info
 function updateSidebarUserInfo() {
   document.getElementById('sidebar-name').textContent = currentUser.name;
   document.getElementById('sidebar-id').textContent = currentUser.id?.slice(0, 8) || '—';
@@ -40,11 +32,11 @@ async function loadConversations() {
   }
 }
 
-// Render conversations list
+// Render conversations list (optimized)
 function renderConversationsList() {
   const container = document.getElementById('conversations-list');
   
-  if (conversations.length === 0) {
+  if (!conversations.length) {
     container.innerHTML = `
       <div class="no-results" style="padding: 32px 16px; text-align: center;">
         <span class="material-icons-round" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;">chat</span>
@@ -55,34 +47,33 @@ function renderConversationsList() {
     return;
   }
   
-  container.innerHTML = conversations.map(conv => {
-    const otherUser = conv.otherUser || {};
-    const lastMessage = conv.lastMessage || {};
-    const isActive = activeConversation?.conversationId === conv.conversationId;
+  const html = conversations.map(conv => {
+    const other = conv.otherUser || {};
+    const last = conv.lastMessage || {};
+    const active = activeConversation?.conversationId === conv.conversationId;
     
     return `
-      <div class="conversation-item ${isActive ? 'active' : ''}" data-conversation-id="${conv.conversationId}">
-        <div class="conv-avatar">${getInitials(otherUser.name)}</div>
+      <div class="conversation-item ${active ? 'active' : ''}" data-id="${conv.conversationId}">
+        <div class="conv-avatar">${getInitials(other.name)}</div>
         <div class="conv-info">
-          <div class="conv-name">${escapeHtml(otherUser.name || 'Unknown')}</div>
-          <div class="conv-last-message">${escapeHtml(lastMessage.content || 'No messages yet')}</div>
+          <div class="conv-name">${escapeHtml(other.name || 'Unknown')}</div>
+          <div class="conv-last-message">${escapeHtml(last.content || '') || 'No messages'}</div>
         </div>
         <div class="conv-meta">
-          <span class="conv-time">${formatDate(lastMessage.timestamp)}</span>
-          ${conv.unreadCount > 0 ? `<span class="conv-unread">${conv.unreadCount}</span>` : ''}
+          <span class="conv-time">${formatDate(last.timestamp)}</span>
+          ${conv.unreadCount ? `<span class="conv-unread">${conv.unreadCount}</span>` : ''}
         </div>
       </div>
     `;
   }).join('');
   
-  // Add click listeners
+  container.innerHTML = html;
+  
+  // Use event delegation instead of individual listeners
   container.querySelectorAll('.conversation-item').forEach(item => {
     item.addEventListener('click', () => {
-      const convId = item.dataset.conversationId;
-      const conversation = conversations.find(c => c.conversationId === convId);
-      if (conversation) {
-        openConversation(conversation);
-      }
+      const conv = conversations.find(c => c.conversationId === item.dataset.id);
+      if (conv) openConversation(conv);
     });
   });
 }
@@ -91,29 +82,20 @@ function renderConversationsList() {
 async function openConversation(conversation) {
   activeConversation = conversation;
   
-  // Update UI
   document.getElementById('chat-empty-state').classList.add('hidden');
   document.getElementById('chat-active').classList.remove('hidden');
   
-  // Update chat header
-  const otherUser = conversation.otherUser || {};
-  document.getElementById('chat-avatar').textContent = getInitials(otherUser.name);
-  document.getElementById('chat-name').textContent = otherUser.name || 'Unknown';
+  const other = conversation.otherUser || {};
+  document.getElementById('chat-avatar').textContent = getInitials(other.name);
+  document.getElementById('chat-name').textContent = other.name || 'Unknown';
   
-  // Load messages
   await loadMessages(conversation.conversationId);
-  
-  // Update active state in sidebar
   renderConversationsList();
-  
-  // Scroll to bottom
   scrollToBottom();
-  
-  // Focus on message input
   document.getElementById('message-input').focus();
 }
 
-// Load messages for conversation
+// Load messages
 async function loadMessages(conversationId) {
   const result = await getMessages(conversationId);
   
@@ -123,12 +105,12 @@ async function loadMessages(conversationId) {
   }
 }
 
-// Render messages
+// Render messages (optimized)
 function renderMessages(conversationId) {
   const container = document.getElementById('messages-container');
   const messages = messagesCache.get(conversationId) || [];
   
-  if (messages.length === 0) {
+  if (!messages.length) {
     container.innerHTML = `
       <div style="text-align: center; padding: 40px; color: var(--text-muted);">
         <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px;">chat_bubble_outline</span>
@@ -138,71 +120,54 @@ function renderMessages(conversationId) {
     return;
   }
   
-  // Group messages by date
-  const groupedMessages = groupMessagesByDate(messages);
-  let html = '';
+  // Use DocumentFragment for better performance
+  const fragment = document.createDocumentFragment();
+  const tempDiv = document.createElement('div');
   
-  for (const [date, msgs] of groupedMessages) {
-    // Add date separator
+  let html = '';
+  let lastDate = '';
+  
+  messages.forEach(msg => {
+    const msgDate = new Date(msg.timestamp).toDateString();
+    if (msgDate !== lastDate) {
+      lastDate = msgDate;
+      html += `<div class="message-date-separator"><span>${getDateLabel(msg.timestamp)}</span></div>`;
+    }
+    
+    const isOutgoing = msg.senderId === currentUser.id;
     html += `
-      <div class="message-date-separator">
-        <span>${date}</span>
+      <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
+        <div class="message-bubble">
+          ${escapeHtml(msg.content)}
+          <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+        </div>
       </div>
     `;
-    
-    // Add messages
-    msgs.forEach(msg => {
-      const isOutgoing = msg.senderId === currentUser.id;
-      
-      html += `
-        <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
-          <div class="message-bubble">
-            ${escapeHtml(msg.content)}
-            <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-          </div>
-        </div>
-      `;
-    });
+  });
+  
+  tempDiv.innerHTML = html;
+  while (tempDiv.firstChild) {
+    fragment.appendChild(tempDiv.firstChild);
   }
   
-  container.innerHTML = html;
-  
+  container.innerHTML = '';
+  container.appendChild(fragment);
   scrollToBottom();
 }
 
-// Group messages by date
-function groupMessagesByDate(messages) {
-  const groups = new Map();
+// Get date label
+function getDateLabel(timestamp) {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   
-  messages.forEach(msg => {
-    const date = new Date(msg.timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    let dateLabel;
-    if (date.toDateString() === today.toDateString()) {
-      dateLabel = 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      dateLabel = 'Yesterday';
-    } else {
-      dateLabel = date.toLocaleDateString('en-US', { 
-        month: 'long', 
-        day: 'numeric', 
-        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
-      });
-    }
-    
-    if (!groups.has(dateLabel)) {
-      groups.set(dateLabel, []);
-    }
-    groups.get(dateLabel).push(msg);
-  });
-  
-  return groups;
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// Send a message
+// Send message - OPTIMIZED FOR INSTANT FEEL
 async function handleSendMessage(e) {
   e.preventDefault();
   
@@ -211,38 +176,88 @@ async function handleSendMessage(e) {
   
   if (!content || !activeConversation) return;
   
-  const btn = document.getElementById('send-message-btn');
-  btn.disabled = true;
+  // Clear input immediately for instant feel
+  input.value = '';
   
-  try {
-    const result = await sendMessage(activeConversation.conversationId, content);
-    
-    if (result.success) {
-      input.value = '';
-      
-      // Add message to cache
-      const messages = messagesCache.get(activeConversation.conversationId) || [];
-      messages.push(result.message);
-      messagesCache.set(activeConversation.conversationId, messages);
-      
-      // Re-render
-      renderMessages(activeConversation.conversationId);
-      
-      // Refresh conversations list to update last message
-      await loadConversations();
-    } else {
-      toast('Failed to send message.', 'error');
-    }
-  } catch (err) {
-    console.error('Send message error:', err);
-    toast('Failed to send message.', 'error');
-  } finally {
-    btn.disabled = false;
-    input.focus();
+  // Create optimistic message
+  const tempId = 'temp_' + Date.now();
+  const tempMessage = {
+    id: tempId,
+    conversationId: activeConversation.conversationId,
+    senderId: currentUser.id,
+    content: content,
+    timestamp: new Date().toISOString(),
+    read: false,
+    pending: true
+  };
+  
+  // Add to cache and render immediately
+  const messages = messagesCache.get(activeConversation.conversationId) || [];
+  messages.push(tempMessage);
+  messagesCache.set(activeConversation.conversationId, messages);
+  renderMessages(activeConversation.conversationId);
+  
+  // Update conversations list optimistically
+  updateConversationLastMessage(activeConversation.conversationId, content);
+  
+  // Send in background
+  sendMessageAsync(activeConversation.conversationId, content, tempId);
+}
+
+// Update conversation last message optimistically
+function updateConversationLastMessage(convId, content) {
+  const conv = conversations.find(c => c.conversationId === convId);
+  if (conv) {
+    conv.lastMessage = {
+      content: content,
+      timestamp: new Date().toISOString()
+    };
+    conv.updatedAt = new Date().toISOString();
+    renderConversationsList();
   }
 }
 
-// Search users (triggered by button or debounced input)
+// Send message async
+async function sendMessageAsync(conversationId, content, tempId) {
+  try {
+    const result = await sendMessage(conversationId, content);
+    
+    if (result.success) {
+      // Replace temp message with real one
+      const messages = messagesCache.get(conversationId) || [];
+      const index = messages.findIndex(m => m.id === tempId);
+      if (index !== -1) {
+        messages[index] = { ...result.message, pending: false };
+        messagesCache.set(conversationId, messages);
+        renderMessages(conversationId);
+      }
+      
+      // Refresh conversations
+      await loadConversations();
+    } else {
+      // Mark as failed
+      const messages = messagesCache.get(conversationId) || [];
+      const index = messages.findIndex(m => m.id === tempId);
+      if (index !== -1) {
+        messages[index].failed = true;
+        messagesCache.set(conversationId, messages);
+        renderMessages(conversationId);
+      }
+      toast('Failed to send', 'error');
+    }
+  } catch (err) {
+    console.error('Send error:', err);
+    const messages = messagesCache.get(conversationId) || [];
+    const index = messages.findIndex(m => m.id === tempId);
+    if (index !== -1) {
+      messages[index].failed = true;
+      messagesCache.set(conversationId, messages);
+      renderMessages(conversationId);
+    }
+  }
+}
+
+// Search users
 async function handleUserSearch(query) {
   if (!query || query.length < 2) {
     document.getElementById('search-results').classList.add('hidden');
@@ -250,16 +265,16 @@ async function handleUserSearch(query) {
   }
   
   const result = await searchUsers(query);
-  const resultsContainer = document.getElementById('search-results');
+  const container = document.getElementById('search-results');
   
-  if (!result.success || !result.users || result.users.length === 0) {
-    resultsContainer.innerHTML = '<div class="no-results">No users found</div>';
-    resultsContainer.classList.remove('hidden');
+  if (!result.success || !result.users?.length) {
+    container.innerHTML = '<div class="no-results">No users found</div>';
+    container.classList.remove('hidden');
     return;
   }
   
-  resultsContainer.innerHTML = result.users.map(user => `
-    <div class="search-result-item" data-user-id="${user.id}">
+  container.innerHTML = result.users.map(user => `
+    <div class="search-result-item" data-id="${user.id}">
       <div class="search-result-avatar">${getInitials(user.name)}</div>
       <div class="search-result-info">
         <div class="search-result-name">${escapeHtml(user.name)}</div>
@@ -268,14 +283,12 @@ async function handleUserSearch(query) {
     </div>
   `).join('');
   
-  resultsContainer.classList.remove('hidden');
+  container.classList.remove('hidden');
   
-  // Add click listeners
-  resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+  container.querySelectorAll('.search-result-item').forEach(item => {
     item.addEventListener('click', async () => {
-      const userId = item.dataset.userId;
-      await startConversationWithUser(userId);
-      resultsContainer.classList.add('hidden');
+      await startConversationWithUser(item.dataset.id);
+      container.classList.add('hidden');
       document.getElementById('user-search-input').value = '';
     });
   });
@@ -286,21 +299,17 @@ async function startConversationWithUser(userId) {
   const result = await getOrCreateConversation(userId);
   
   if (result.success && result.conversation) {
-    // Check if conversation already exists in list
-    const existingConv = conversations.find(c => c.conversationId === result.conversation.conversationId);
-    
-    if (!existingConv) {
+    if (!conversations.find(c => c.conversationId === result.conversation.conversationId)) {
       conversations.unshift(result.conversation);
     }
-    
     openConversation(result.conversation);
     renderConversationsList();
   } else {
-    toast('Failed to start conversation.', 'error');
+    toast('Failed to start chat', 'error');
   }
 }
 
-// Close active chat
+// Close chat
 function closeChat() {
   activeConversation = null;
   document.getElementById('chat-empty-state').classList.remove('hidden');
@@ -308,150 +317,79 @@ function closeChat() {
   renderConversationsList();
 }
 
-// Scroll messages to bottom
+// Scroll to bottom
 function scrollToBottom() {
-  const container = document.getElementById('messages-container');
-  setTimeout(() => {
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }, 50);
+  requestAnimationFrame(() => {
+    const container = document.getElementById('messages-container');
+    if (container) container.scrollTop = container.scrollHeight;
+  });
 }
 
-// Escape HTML to prevent XSS
+// Escape HTML
 function escapeHtml(text) {
   if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  return text.replace(/[&<>"']/g, (char) => {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return map[char];
+  });
 }
 
-// Setup messenger event listeners
+// Setup events
 function setupMessengerEvents() {
-  // User search input (debounced)
   const searchInput = document.getElementById('user-search-input');
+  
   searchInput.addEventListener('input', (e) => {
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
-      handleUserSearch(e.target.value.trim());
-    }, 300);
+    searchDebounceTimer = setTimeout(() => handleUserSearch(e.target.value.trim()), 250);
   });
   
-  // Search button
   document.getElementById('search-btn').addEventListener('click', () => {
-    const query = searchInput.value.trim();
-    handleUserSearch(query);
+    handleUserSearch(searchInput.value.trim());
   });
   
-  // Press Enter in search input
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const query = searchInput.value.trim();
-      handleUserSearch(query);
+      handleUserSearch(searchInput.value.trim());
     }
   });
   
-  // Hide search results when clicking outside
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-section')) {
       document.getElementById('search-results').classList.add('hidden');
     }
   });
   
-  // Prevent search results from closing when clicking inside
-  document.getElementById('search-results').addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-  
-  // Message form
   document.getElementById('message-form').addEventListener('submit', handleSendMessage);
-  
-  // Close chat
   document.getElementById('close-chat').addEventListener('click', closeChat);
-  
-  // Mobile back button (if applicable)
-  window.addEventListener('popstate', (e) => {
-    if (activeConversation) {
-      closeChat();
-    }
-  });
 }
 
-// Start polling for new messages
+// Message polling (lighter)
 function startMessagePolling() {
   stopMessagePolling();
   
   messagePollingInterval = setInterval(async () => {
     if (!currentUser) return;
     
-    // Refresh conversations list
     await loadConversations();
     
-    // If there's an active conversation, check for new messages
     if (activeConversation) {
       const result = await getMessages(activeConversation.conversationId);
       if (result.success) {
-        const currentMessages = messagesCache.get(activeConversation.conversationId) || [];
-        const newMessages = result.messages || [];
+        const current = messagesCache.get(activeConversation.conversationId) || [];
+        const fresh = result.messages || [];
         
-        // Only update if there are new messages
-        if (newMessages.length > currentMessages.length) {
-          messagesCache.set(activeConversation.conversationId, newMessages);
+        // Only update if new messages and no pending ones
+        const hasPending = current.some(m => m.pending);
+        if (fresh.length > current.length && !hasPending) {
+          messagesCache.set(activeConversation.conversationId, fresh);
           renderMessages(activeConversation.conversationId);
-          
-          // Show notification for new incoming messages
-          const lastMsg = newMessages[newMessages.length - 1];
-          if (lastMsg && lastMsg.senderId !== currentUser.id) {
-            // Check if the chat is currently visible
-            const container = document.getElementById('messages-container');
-            const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-            
-            if (!isNearBottom) {
-              // Show new message indicator
-              showNewMessageIndicator();
-            }
-            
-            // Play notification sound (optional)
-            // playMessageSound();
-          }
         }
       }
     }
-  }, 3000);
+  }, 2000); // Faster polling
 }
 
-// Show new message indicator
-function showNewMessageIndicator() {
-  const container = document.getElementById('messages-container');
-  const existingIndicator = container.querySelector('.new-message-indicator');
-  
-  if (existingIndicator) return;
-  
-  const indicator = document.createElement('div');
-  indicator.className = 'new-message-indicator';
-  indicator.innerHTML = `
-    <span class="material-icons-round">arrow_downward</span>
-    <span>New messages</span>
-  `;
-  indicator.addEventListener('click', scrollToBottom);
-  
-  container.appendChild(indicator);
-  
-  // Auto-hide after scrolling
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        indicator.remove();
-        observer.disconnect();
-      }
-    });
-  });
-  
-  observer.observe(container.lastElementChild);
-}
-
-// Stop message polling
 function stopMessagePolling() {
   if (messagePollingInterval) {
     clearInterval(messagePollingInterval);
@@ -459,15 +397,15 @@ function stopMessagePolling() {
   }
 }
 
-// Clean up on page unload
+// Cleanup
 window.addEventListener('beforeunload', () => {
   stopMessagePolling();
-  if (qrStream) {
-    qrStream.getTracks().forEach(track => track.stop());
+  if (typeof qrStream !== 'undefined' && qrStream) {
+    qrStream.getTracks().forEach(t => t.stop());
   }
 });
 
-// Export functions for global use (if needed)
+// Exports
 window.openConversation = openConversation;
 window.closeChat = closeChat;
 window.renderConversationsList = renderConversationsList;

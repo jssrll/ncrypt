@@ -1216,6 +1216,90 @@ input:checked + .slider:before {
 }
 
 /* ============================================================
+   LIGHTER FEEL ENHANCEMENTS
+============================================================ */
+
+/* Faster transitions */
+:root {
+  --transition: 0.15s ease-out;
+}
+
+/* Optimistic message styling */
+.message-row .message-bubble.pending {
+  opacity: 0.7;
+}
+
+.message-row .message-bubble.failed {
+  background: #FEE2E2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA;
+}
+
+/* Lighter containers */
+.messenger-sidebar {
+  background: #FAFAF8;
+}
+
+.messenger-main {
+  background: #FFFFFF;
+}
+
+/* Smooth scrolling */
+.messages-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Faster animations */
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading spinner faster */
+.spinner {
+  animation: spin 0.5s linear infinite;
+}
+
+/* Message input focus */
+.message-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+  transition: all 0.1s;
+}
+
+/* Click feedback */
+.btn-icon:active,
+.btn-send:active,
+.conversation-item:active {
+  transform: scale(0.98);
+}
+
+/* Remove heavy shadows */
+.conversation-item,
+.stat-card,
+.modal-container {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Lighter borders */
+.messenger-sidebar,
+.chat-header,
+.message-input-container {
+  border-color: #EEECE5;
+}
+
+/* Optimistic message indicator */
+.message-status {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.message-status.sent { color: #10B981; }
+.message-status.failed { color: #DC2626; }
+
+/* ============================================================
    RESPONSIVE
 ============================================================ */
 @media (max-width: 768px) {
