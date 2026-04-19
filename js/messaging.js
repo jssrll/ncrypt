@@ -11,6 +11,66 @@ function initializeMessenger() {
   initSettings();
 }
 
+// ── File content parser ───────────────────────────────────────
+// Parses the JSON envelope that attach.js encodes into every
+// file message. Returns { _ncrypt_type, _ncrypt_name, _ncrypt_url }
+// or null if the content is a plain text message.
+function parseFileContent(content) {
+  if (!content || content[0] !== '{') return null;
+  try {
+    const data = JSON.parse(content);
+    if (data._ncrypt_type && data._ncrypt_url) return data;
+  } catch (_) {}
+  return null;
+}
+
+// Extracts Google Drive file ID from any Drive URL format
+function getDriveFileIdFromMsg(url) {
+  if (!url) return null;
+  let m = url.match(/\/file\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return m[1];
+  m = url.match(/\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  return null;
+}
+
+// Returns a browser-renderable URL for a Drive file
+function resolveDisplayUrl(driveUrl, type) {
+  const fileId = getDriveFileIdFromMsg(driveUrl);
+  if (!fileId) return driveUrl;
+  if (type === 'image') return `https://lh3.googleusercontent.com/d/${fileId}`;
+  // video, audio, file
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
+
+// Enhances a raw server message with parsed type/URL fields
+function enhanceMessage(msg) {
+  // Already enhanced (e.g. from local cache)
+  if (msg._enhanced) return msg;
+
+  const parsed = parseFileContent(msg.content);
+  if (parsed) {
+    msg.type = parsed._ncrypt_type;
+    msg.fileName = parsed._ncrypt_name;
+    msg._fileUrl = resolveDisplayUrl(parsed._ncrypt_url, parsed._ncrypt_type);
+    msg._driveUrl = parsed._ncrypt_url; // original Drive URL for download links
+  } else if (!msg.type || msg.type === 'text') {
+    // Legacy fallback: plain Drive URL stored as text (old messages)
+    if (msg.content && msg.content.includes('drive.google.com')) {
+      msg.type = 'file';
+      msg._fileUrl = msg.content;
+      msg._driveUrl = msg.content;
+    } else {
+      msg.type = 'text';
+    }
+  }
+
+  msg._enhanced = true;
+  return msg;
+}
+
 // Load conversations
 async function loadConversations() {
   const result = await getConversations();
@@ -46,7 +106,16 @@ function renderConversationsList() {
     else if (last.type === 'video') previewText = '🎬 Video';
     else if (last.type === 'audio') previewText = '🎤 Voice message';
     else if (last.type === 'file') previewText = `📎 ${last.fileName || 'File'}`;
-    else previewText = last.content || 'No messages yet';
+    else {
+      // Check if it's a file content envelope
+      const parsed = parseFileContent(last.content);
+      if (parsed) {
+        const icons = { image: '📷', video: '🎬', audio: '🎤', file: '📎' };
+        previewText = `${icons[parsed._ncrypt_type] || '📎'} ${parsed._ncrypt_name || 'File'}`;
+      } else {
+        previewText = last.content || 'No messages yet';
+      }
+    }
 
     return `
       <div class="conversation-item${active ? ' active' : ''}" data-id="${conv.conversationId}">
@@ -95,31 +164,13 @@ async function openConversation(conversation) {
 async function loadMessages(conversationId) {
   const result = await getMessages(conversationId);
   if (result.success) {
-    // Enhance messages with type detection (if not already set)
-    const enhancedMessages = (result.messages || []).map(msg => {
-      if (!msg.type) {
-        // Auto-detect type from content
-        if (msg.content && msg.content.includes('?id=')) {
-          // It's a file URL from our Drive proxy
-          msg.type = 'file';
-        } else if (msg.content && msg.content.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
-          msg.type = 'image';
-        } else if (msg.content && msg.content.match(/\.(mp4|webm|mov)/i)) {
-          msg.type = 'video';
-        } else if (msg.content && msg.content.match(/\.(mp3|wav|ogg)/i)) {
-          msg.type = 'audio';
-        } else {
-          msg.type = 'text';
-        }
-      }
-      return msg;
-    });
-    messagesCache.set(conversationId, enhancedMessages);
+    const enhanced = (result.messages || []).map(enhanceMessage);
+    messagesCache.set(conversationId, enhanced);
     renderMessages(conversationId);
   }
 }
 
-// Render messages with full attachment support
+// ── Render messages with full attachment support ───────────────
 function renderMessages(conversationId) {
   const container = document.getElementById('messages-container');
   const messages = messagesCache.get(conversationId) || [];
@@ -145,46 +196,90 @@ function renderMessages(conversationId) {
       lastDate = msgDate;
       html += `<div class="message-date-separator"><span>${getDateLabel(msg.timestamp)}</span></div>`;
     }
+
     const isOutgoing = msg.senderId === currentUser.id;
     const bubbleClass = msg.pending ? 'pending' : msg.failed ? 'failed' : '';
-
-    // Render based on message type
-    let contentHtml = '';
     const msgType = msg.type || 'text';
 
+    // The resolved display URL (already converted from Drive URL in enhanceMessage)
+    const displayUrl = msg._fileUrl || msg.content;
+    // Original Drive URL for download links
+    const driveUrl = msg._driveUrl || msg.content;
+    const fileName = msg.fileName || 'File';
+
+    let contentHtml = '';
+
     if (msgType === 'image') {
+      // lh3.googleusercontent.com/d/FILE_ID renders in <img> without CORS issues
       contentHtml = `
-        <a href="${msg.content}" target="_blank">
-          <img src="${msg.content}" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" loading="lazy" onerror="this.style.display='none'">
-        </a>
-      `;
+        <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener">
+          <img
+            src="${escapeHtml(displayUrl)}"
+            alt="${escapeHtml(fileName)}"
+            style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:4px;cursor:pointer;"
+            loading="lazy"
+            onerror="this.parentElement.innerHTML='<div style=\\'padding:8px;font-size:12px;color:var(--text-muted);\\'>📷 Image — <a href=\\'${escapeHtml(driveUrl)}\\' target=\\'_blank\\'>Open in Drive</a></div>'"
+          >
+        </a>`;
     } else if (msgType === 'video') {
+      // Drive uc?export=download works as a <video> src for small files.
+      // Large files fall back to an "Open in Drive" link via the error handler.
+      const fileId = getDriveFileIdFromMsg(driveUrl);
+      const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
       contentHtml = `
-        <video src="${msg.content}" controls style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" onerror="this.style.display='none'">
-          Your browser does not support the video tag.
-        </video>
-      `;
+        <div style="margin-bottom:4px;">
+          ${previewUrl
+            ? `<iframe src="${escapeHtml(previewUrl)}" width="220" height="160"
+                style="border:none;border-radius:8px;display:block;"
+                allow="autoplay" allowfullscreen></iframe>`
+            : `<video src="${escapeHtml(displayUrl)}" controls
+                style="max-width:220px;max-height:160px;border-radius:8px;display:block;"
+                onerror="this.style.display='none'">
+              </video>`
+          }
+          <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener"
+             style="font-size:12px;color:var(--accent);text-decoration:none;">
+            ▶ Open video in Drive
+          </a>
+        </div>`;
     } else if (msgType === 'audio') {
+      // Drive download URL works as <audio> src for webm/mp3 under ~20MB
       contentHtml = `
-        <audio src="${msg.content}" controls style="max-width:220px;display:block;margin-bottom:4px;">
-          Your browser does not support the audio element.
-        </audio>
-      `;
-    } else if (msgType === 'file') {
-      // For file attachments, show a download link with icon
-      contentHtml = `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(0,0,0,0.03);border-radius:8px;margin-bottom:4px;">
-          <span class="material-icons-round" style="font-size:28px;color:var(--accent);">insert_drive_file</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(msg.fileName || 'File')}</div>
-            <a href="${msg.content}" download="${msg.fileName || 'file'}" target="_blank" style="color:var(--accent);font-size:12px;text-decoration:none;">
-              Download
-            </a>
+        <div style="margin-bottom:4px;">
+          <audio
+            src="${escapeHtml(displayUrl)}"
+            controls
+            style="max-width:230px;display:block;"
+            onerror="this.outerHTML='<a href=\\'${escapeHtml(driveUrl)}\\' target=\\'_blank\\' style=\\'font-size:12px;color:var(--accent);\\'>🎤 Open voice message</a>'"
+          ></audio>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            🎤 ${escapeHtml(fileName)}
           </div>
-        </div>
-      `;
+        </div>`;
+    } else if (msgType === 'file') {
+      const fileId = getDriveFileIdFromMsg(driveUrl);
+      const downloadUrl = fileId
+        ? `https://drive.google.com/uc?export=download&id=${fileId}`
+        : driveUrl;
+      contentHtml = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.04);border-radius:10px;margin-bottom:4px;min-width:160px;">
+          <span class="material-icons-round" style="font-size:28px;color:var(--accent);flex-shrink:0;">insert_drive_file</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(fileName)}</div>
+            <div style="display:flex;gap:8px;margin-top:2px;">
+              <a href="${escapeHtml(downloadUrl)}" download="${escapeHtml(fileName)}" target="_blank"
+                 style="color:var(--accent);font-size:12px;text-decoration:none;">Download</a>
+              <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener"
+                 style="color:var(--text-muted);font-size:12px;text-decoration:none;">View</a>
+            </div>
+          </div>
+        </div>`;
     } else {
-      contentHtml = escapeHtml(msg.content).replace(/\n/g, '<br>');
+      // Plain text — skip if it looks like raw JSON (malformed file message)
+      const displayContent = (msg.content && msg.content[0] === '{')
+        ? '📎 Attachment'
+        : escapeHtml(msg.content).replace(/\n/g, '<br>');
+      contentHtml = displayContent;
     }
 
     html += `
@@ -236,16 +331,19 @@ function addOptimisticMessage(msgData) {
     content: msgData.content,
     type: msgData.type || 'text',
     fileName: msgData.fileName,
+    _fileUrl: msgData._fileUrl,
+    _driveUrl: msgData._driveUrl,
     timestamp: new Date().toISOString(),
-    pending: true
+    pending: true,
+    _enhanced: true
   };
 
   const messages = messagesCache.get(activeConversation.conversationId) || [];
   messages.push(tempMessage);
   messagesCache.set(activeConversation.conversationId, messages);
   renderMessages(activeConversation.conversationId);
-  
-  // Update conversation preview
+
+  // Update sidebar preview
   let preview = msgData.content;
   if (msgData.type === 'image') preview = '📷 Image';
   else if (msgData.type === 'video') preview = '🎬 Video';
@@ -272,18 +370,24 @@ async function sendMessageAsync(conversationId, content, tempId) {
     const index = messages.findIndex(m => m.id === tempId);
     if (result.success) {
       if (index !== -1) {
-        messages[index] = { 
-          ...result.message, 
+        // Merge server message but keep local type/URL fields
+        const local = messages[index];
+        messages[index] = {
+          ...result.message,
           pending: false,
-          type: messages[index].type // preserve type
+          type: local.type,
+          fileName: local.fileName,
+          _fileUrl: local._fileUrl,
+          _driveUrl: local._driveUrl,
+          _enhanced: true
         };
         messagesCache.set(conversationId, messages);
       }
       await loadConversations();
     } else {
-      if (index !== -1) { 
-        messages[index].pending = false; 
-        messages[index].failed = true; 
+      if (index !== -1) {
+        messages[index].pending = false;
+        messages[index].failed = true;
       }
       toast('Failed to send', 'error');
     }
@@ -292,9 +396,9 @@ async function sendMessageAsync(conversationId, content, tempId) {
     console.error('Send error:', err);
     const messages = messagesCache.get(conversationId) || [];
     const index = messages.findIndex(m => m.id === tempId);
-    if (index !== -1) { 
-      messages[index].pending = false; 
-      messages[index].failed = true; 
+    if (index !== -1) {
+      messages[index].pending = false;
+      messages[index].failed = true;
     }
     renderMessages(conversationId);
   }
@@ -429,21 +533,10 @@ function startMessagePolling() {
       if (result.success) {
         const current = messagesCache.get(activeConversation.conversationId) || [];
         const fresh = result.messages || [];
-        // Only update if there are new messages and no pending ones
         const hasPending = current.some(m => m.pending);
         if (fresh.length > current.length && !hasPending) {
-          // Enhance fresh messages with types
-          const enhancedFresh = fresh.map(msg => {
-            if (!msg.type) {
-              if (msg.content && msg.content.includes('?id=')) msg.type = 'file';
-              else if (msg.content && msg.content.match(/\.(jpg|jpeg|png|gif|webp)/i)) msg.type = 'image';
-              else if (msg.content && msg.content.match(/\.(mp4|webm|mov)/i)) msg.type = 'video';
-              else if (msg.content && msg.content.match(/\.(mp3|wav|ogg)/i)) msg.type = 'audio';
-              else msg.type = 'text';
-            }
-            return msg;
-          });
-          messagesCache.set(activeConversation.conversationId, enhancedFresh);
+          const enhanced = fresh.map(enhanceMessage);
+          messagesCache.set(activeConversation.conversationId, enhanced);
           renderMessages(activeConversation.conversationId);
         }
       }
@@ -452,9 +545,9 @@ function startMessagePolling() {
 }
 
 function stopMessagePolling() {
-  if (messagePollingInterval) { 
-    clearInterval(messagePollingInterval); 
-    messagePollingInterval = null; 
+  if (messagePollingInterval) {
+    clearInterval(messagePollingInterval);
+    messagePollingInterval = null;
   }
 }
 

@@ -12,6 +12,45 @@ let voiceSeconds = 0;
 let recordedBlob = null;
 let isRecording = false;
 
+// ── File content format helpers ────────────────────────────────
+// Encodes type metadata into the message content string so the
+// backend stores it, and recipients can decode it on load.
+function buildFileContent(type, name, url) {
+  return JSON.stringify({ _ncrypt_type: type, _ncrypt_name: name, _ncrypt_url: url });
+}
+
+// Extracts the Google Drive file ID from any Drive URL format
+function getDriveFileId(url) {
+  if (!url) return null;
+  // https://drive.google.com/file/d/FILE_ID/view
+  let m = url.match(/\/file\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  // https://drive.google.com/open?id=FILE_ID  or  ?id=FILE_ID
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return m[1];
+  // https://lh3.googleusercontent.com/d/FILE_ID
+  m = url.match(/\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  return null;
+}
+
+// Converts any Drive URL to one that browsers can actually load
+function getDriveDisplayUrl(driveUrl, type) {
+  const fileId = getDriveFileId(driveUrl);
+  if (!fileId) return driveUrl; // not a Drive URL, use as-is
+
+  if (type === 'image') {
+    // lh3.googleusercontent.com/d/ works in <img> without CORS issues
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  if (type === 'video' || type === 'audio') {
+    // Drive uc?export=download works for media src attributes
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+  // Generic file: direct download
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
+
 // ── Attach menu ───────────────────────────────────────────────
 function initAttach() {
   const attachBtn = document.getElementById('attach-btn');
@@ -78,16 +117,16 @@ function closeAttachMenu() {
 async function handleFileUpload(event, type) {
   const file = event.target.files[0];
   event.target.value = '';
-  
+
   if (!file || !activeConversation) return;
-  
+
   const sizeMB = (file.size / 1024 / 1024).toFixed(1);
   if (file.size > 25 * 1024 * 1024) {
     toast(`File too large (${sizeMB}MB). Max 25MB.`, 'error');
     return;
   }
 
-  // Create optimistic message
+  // Create optimistic message while uploading
   const tempId = 'temp_' + Date.now();
   const tempMessage = {
     id: tempId,
@@ -100,38 +139,48 @@ async function handleFileUpload(event, type) {
     pending: true
   };
 
-  // Add to cache and render
   const messages = messagesCache.get(activeConversation.conversationId) || [];
   messages.push(tempMessage);
   messagesCache.set(activeConversation.conversationId, messages);
   renderMessages(activeConversation.conversationId);
-  updateConversationLastMessage(activeConversation.conversationId, `📎 ${file.name}`);
+
+  const previewLabel = type === 'image' ? '📷 Image' : type === 'video' ? '🎬 Video' : `📎 ${file.name}`;
+  updateConversationLastMessage(activeConversation.conversationId, previewLabel);
   scrollToBottom();
 
   try {
     // Convert file to base64
     const base64 = await fileToBase64(file);
-    
-    // Upload via API
+
+    // Upload to Google Drive via API
     const result = await uploadFile(file.name, file.type || 'application/octet-stream', base64);
-    
+
     if (result.success && result.fileUrl) {
-      // Replace optimistic message with real one
-      const messages = messagesCache.get(activeConversation.conversationId) || [];
-      const index = messages.findIndex(m => m.id === tempId);
+      // Convert the Drive URL to a browser-renderable display URL
+      const displayUrl = getDriveDisplayUrl(result.fileUrl, type);
+
+      // Build structured content: encodes the type + name + original Drive URL
+      // so the recipient can decode it when they load messages
+      const fileContent = buildFileContent(type, file.name, result.fileUrl);
+
+      // Update optimistic message in the local cache for immediate display
+      const msgs = messagesCache.get(activeConversation.conversationId) || [];
+      const index = msgs.findIndex(m => m.id === tempId);
       if (index !== -1) {
-        messages[index] = {
-          ...messages[index],
-          content: result.fileUrl,
-          fileId: result.fileId,
+        msgs[index] = {
+          ...msgs[index],
+          content: fileContent,
+          _fileUrl: displayUrl,   // pre-resolved for sender's immediate render
+          fileName: file.name,
+          type: type,
           pending: false
         };
-        messagesCache.set(activeConversation.conversationId, messages);
+        messagesCache.set(activeConversation.conversationId, msgs);
         renderMessages(activeConversation.conversationId);
       }
-      
-      // Also send the file URL as a regular message to persist it
-      await sendMessage(activeConversation.conversationId, result.fileUrl);
+
+      // Persist the structured content to the backend
+      await sendMessage(activeConversation.conversationId, fileContent);
       toast('File sent!', 'success');
     } else {
       markMessageFailed(tempId);
@@ -154,6 +203,7 @@ function fileToBase64(file) {
 }
 
 function markMessageFailed(tempId) {
+  if (!activeConversation) return;
   const messages = messagesCache.get(activeConversation.conversationId) || [];
   const index = messages.findIndex(m => m.id === tempId);
   if (index !== -1) {
@@ -164,7 +214,7 @@ function markMessageFailed(tempId) {
   }
 }
 
-// ── Voice Recording (unchanged) ─────────────────────────────────
+// ── Voice Recording ─────────────────────────────────────────────
 function openVoiceModal() {
   recordedBlob = null;
   isRecording = false;
@@ -187,6 +237,8 @@ function updateVoiceUI(state) {
     status.textContent = 'Tap record to start';
     recordBtn.innerHTML = '<span class="material-icons-round">mic</span> Record';
     recordBtn.style.background = '';
+    recordBtn.style.color = '';
+    recordBtn.disabled = false;
     sendBtn.disabled = true;
   } else if (state === 'recording') {
     indicator.innerHTML = '<span class="material-icons-round" style="font-size:48px;color:#DC2626;animation:logoPulse 1s infinite;">mic</span>';
@@ -194,6 +246,7 @@ function updateVoiceUI(state) {
     recordBtn.innerHTML = '<span class="material-icons-round">stop</span> Stop';
     recordBtn.style.background = '#DC2626';
     recordBtn.style.color = '#fff';
+    recordBtn.disabled = false;
     sendBtn.disabled = true;
   } else if (state === 'done') {
     indicator.innerHTML = '<span class="material-icons-round" style="font-size:48px;color:#16A34A;">check_circle</span>';
@@ -201,7 +254,13 @@ function updateVoiceUI(state) {
     recordBtn.innerHTML = '<span class="material-icons-round">restart_alt</span> Re-record';
     recordBtn.style.background = '';
     recordBtn.style.color = '';
+    recordBtn.disabled = false;
     sendBtn.disabled = false;
+  } else if (state === 'uploading') {
+    indicator.innerHTML = '<span class="material-icons-round" style="font-size:48px;color:var(--accent);">cloud_upload</span>';
+    status.textContent = 'Uploading...';
+    recordBtn.disabled = true;
+    sendBtn.disabled = true;
   }
 }
 
@@ -249,21 +308,69 @@ function stopVoiceRecording() {
   isRecording = false;
 }
 
-function sendVoiceMessage() {
+// ── FIXED: Voice now uploads to Drive, no more blob URLs ─────
+async function sendVoiceMessage() {
   if (!recordedBlob || !activeConversation) return;
 
-  const objectUrl = URL.createObjectURL(recordedBlob);
   const m = Math.floor(voiceSeconds / 60);
   const s = String(voiceSeconds % 60).padStart(2, '0');
+  const voiceName = `Voice ${m}:${s}`;
+  const fileName = `voice_${Date.now()}.webm`;
 
-  addOptimisticMessage({
-    content: objectUrl,
-    type: 'audio',
-    fileName: `Voice ${m}:${s}`
-  });
+  // Show uploading state in the modal
+  updateVoiceUI('uploading');
 
-  closeModal('voice-modal');
-  toast('Voice message sent!', 'success');
+  try {
+    // Convert blob to base64 (same helper used for file uploads)
+    const base64 = await fileToBase64(recordedBlob);
+
+    // Upload to Google Drive
+    const result = await uploadFile(fileName, 'audio/webm', base64);
+
+    if (result.success && result.fileUrl) {
+      const displayUrl = getDriveDisplayUrl(result.fileUrl, 'audio');
+      const fileContent = buildFileContent('audio', voiceName, result.fileUrl);
+
+      // Add to local cache immediately with the resolved display URL
+      const tempId = 'temp_voice_' + Date.now();
+      const msgs = messagesCache.get(activeConversation.conversationId) || [];
+      msgs.push({
+        id: tempId,
+        conversationId: activeConversation.conversationId,
+        senderId: currentUser.id,
+        content: fileContent,
+        _fileUrl: displayUrl,
+        type: 'audio',
+        fileName: voiceName,
+        timestamp: new Date().toISOString(),
+        pending: true
+      });
+      messagesCache.set(activeConversation.conversationId, msgs);
+      renderMessages(activeConversation.conversationId);
+      updateConversationLastMessage(activeConversation.conversationId, '🎤 Voice message');
+      scrollToBottom();
+
+      // Persist to backend
+      const sendResult = await sendMessage(activeConversation.conversationId, fileContent);
+      const latestMsgs = messagesCache.get(activeConversation.conversationId) || [];
+      const idx = latestMsgs.findIndex(mm => mm.id === tempId);
+      if (idx !== -1) {
+        latestMsgs[idx].pending = false;
+        if (!sendResult.success) latestMsgs[idx].failed = true;
+        renderMessages(activeConversation.conversationId);
+      }
+
+      closeModal('voice-modal');
+      toast('Voice message sent!', 'success');
+    } else {
+      updateVoiceUI('done');
+      toast('Upload failed: ' + (result.message || 'Try again'), 'error');
+    }
+  } catch (err) {
+    console.error('Voice upload error:', err);
+    updateVoiceUI('done');
+    toast('Failed to send voice message. Check connection.', 'error');
+  }
 }
 
 // Init on load
