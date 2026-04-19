@@ -4,42 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   
-  <!-- PWA Meta Tags -->
-  <meta name="application-name" content="ncrypt">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ncrypt">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#D9714E">
-  <meta name="msapplication-TileColor" content="#D9714E">
-  <meta name="msapplication-tap-highlight" content="no">
-  
-  <!-- Description -->
-  <meta name="description" content="ncrypt — Secure messaging platform with QR code sharing">
-  <meta name="keywords" content="messaging, secure, chat, encryption, qr code">
-  <meta name="author" content="ncrypt">
-  
-  <!-- Open Graph / Social -->
-  <meta property="og:title" content="ncrypt — Secure Messenger">
-  <meta property="og:description" content="Secure messaging with QR code sharing">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="/icons/icon-512x512.png">
-  <meta property="og:url" content="https://ncrypt.app">
-  
-  <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
-  <link rel="shortcut icon" type="image/x-icon" href="/icons/favicon.ico">
-  
-  <!-- Apple Touch Icons -->
-  <link rel="apple-touch-icon" href="/icons/icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
-  
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/manifest.json">
-  
   <title>ncrypt — Secure Messenger</title>
+  
+  <!-- Favicon (keep if you want) -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -243,31 +211,25 @@
     </div>
   </div>
 
-<!-- Settings Modal -->
-<div id="settings-modal" class="modal hidden">
-  <div class="modal-overlay"></div>
-  <div class="modal-container">
-    <div class="modal-header">
-      <h2>Settings</h2>
-      <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
-    </div>
-    <div class="modal-body">
-      <div class="settings-section">
-        <!-- Install App Button - Will be shown when installable -->
-        <button class="settings-btn" id="pwa-install-btn" style="display: none;">
-          <span class="material-icons-round">download</span>
-          <span>Install App</span>
-        </button>
-        
-        <button class="settings-btn danger" id="settings-logout-btn">
-          <span class="material-icons-round">logout</span>
-          <span>Logout</span>
-        </button>
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
       </div>
-      <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
+      <div class="modal-body">
+        <div class="settings-section">
+          <button class="settings-btn danger" id="settings-logout-btn">
+            <span class="material-icons-round">logout</span>
+            <span>Logout</span>
+          </button>
+        </div>
+        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- QR Code Modal -->
   <div id="qr-modal" class="modal hidden">
@@ -314,12 +276,6 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Offline Indicator -->
-  <div class="offline-indicator">
-    <span class="material-icons-round" style="font-size: 14px;">wifi_off</span>
-    You are offline
-  </div>
-
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
@@ -329,7 +285,6 @@
   <script src="js/qrcode.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/settings.js"></script>
-  <script src="js/pwa.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
