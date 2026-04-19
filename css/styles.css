@@ -799,3 +799,347 @@ a { text-decoration: none; color: inherit; cursor: pointer; }
   
   .messenger-sidebar { border-right: none; }
 }
+
+/* ============================================================
+   PWA STYLES
+============================================================ */
+
+/* Update notification */
+.update-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  background: var(--accent);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-lg);
+  z-index: 10000;
+  animation: slideUp 0.3s ease;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.update-notification span {
+  font-weight: 500;
+}
+
+.update-notification button {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.update-notification button:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Offline indicator */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #DC2626;
+  color: #fff;
+  text-align: center;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 10001;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+body.offline .offline-indicator {
+  transform: translateY(0);
+}
+
+/* Standalone mode adjustments */
+@media (display-mode: standalone) {
+  .chat-screen {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .message-input-container {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  
+  /* Hide browser UI elements when installed */
+  .browser-only {
+    display: none;
+  }
+}
+
+/* Pull to refresh indicator */
+.pull-to-refresh {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+  font-size: 13px;
+  gap: 8px;
+}
+
+.pull-to-refresh.active {
+  transform: translateY(0);
+}
+
+.pull-to-refresh .material-icons-round {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Install banner */
+.install-banner {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  padding: 12px 16px;
+  margin: 12px;
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+}
+
+.install-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.install-banner-content .material-icons-round {
+  font-size: 28px;
+}
+
+.install-banner-text h4 {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.install-banner-text p {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.install-banner button {
+  background: #fff;
+  color: var(--accent);
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Loading skeleton for PWA */
+.skeleton {
+  background: linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%);
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+  border-radius: var(--r-sm);
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 6px;
+}
+
+.skeleton-text-sm {
+  height: 12px;
+  width: 70%;
+}
+
+/* Attach button */
+.btn-attach {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-attach:active {
+  background: var(--border-light);
+  transform: scale(0.95);
+}
+
+.btn-attach .material-icons-round {
+  font-size: 24px;
+}
+
+/* Message form with attach */
+.message-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Clickable chat user info */
+#chat-user-info-click {
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+#chat-user-info-click:active {
+  opacity: 0.7;
+}
+
+/* Adaptive container heights */
+.messenger-container,
+.conversations-screen,
+.chat-screen,
+.messenger-sidebar {
+  height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+/* Safe area adjustments for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .sidebar-header {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+  
+  .chat-header {
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+  
+  .message-input-container {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  
+  .toast-container {
+    top: max(16px, env(safe-area-inset-top));
+  }
+}
+
+/* Tablet and desktop optimizations */
+@media (min-width: 768px) {
+  .messenger-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .conversations-screen {
+    width: 380px;
+    position: relative;
+    border-right: 1px solid var(--border);
+  }
+  
+  .chat-screen {
+    position: relative;
+    flex: 1;
+  }
+  
+  #back-to-conversations {
+    display: none;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  .messenger-container {
+    max-width: 1400px;
+  }
+  
+  .conversations-screen {
+    width: 420px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  .conv-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+  
+  .conv-name {
+    font-size: 14px;
+  }
+  
+  .conv-last-message {
+    font-size: 12px;
+  }
+  
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .message-input {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+/* Offline indicator */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #DC2626;
+  color: #fff;
+  text-align: center;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 10001;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+body.offline .offline-indicator {
+  transform: translateY(0);
+}
+
+/* Performance optimizations */
+.conversations-list,
+.messages-container {
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Hardware acceleration for animations */
+.modal-container,
+.chat-screen,
+.conversations-screen {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

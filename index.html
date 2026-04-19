@@ -3,12 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="ncrypt">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ncrypt">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#D9714E">
+  <meta name="msapplication-TileColor" content="#D9714E">
+  <meta name="msapplication-tap-highlight" content="no">
+  
+  <!-- Description -->
+  <meta name="description" content="ncrypt — Secure messaging platform with QR code sharing">
+  <meta name="keywords" content="messaging, secure, chat, encryption, qr code">
+  <meta name="author" content="ncrypt">
+  
+  <!-- Open Graph / Social -->
+  <meta property="og:title" content="ncrypt — Secure Messenger">
+  <meta property="og:description" content="Secure messaging with QR code sharing">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/icons/icon-512x512.png">
+  <meta property="og:url" content="https://ncrypt.app">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+  <link rel="shortcut icon" type="image/x-icon" href="/icons/favicon.ico">
+  
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
   <title>ncrypt — Secure Messenger</title>
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- QR Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
@@ -95,7 +137,7 @@
   <!-- Messenger App Screen -->
   <div id="app-screen" class="hidden">
     <div class="messenger-container">
-      <!-- Conversations List Screen (Mobile: always visible when no chat selected) -->
+      <!-- Conversations List Screen -->
       <div id="conversations-screen" class="conversations-screen">
         <div class="messenger-sidebar">
           <div class="sidebar-header">
@@ -129,13 +171,13 @@
         </div>
       </div>
 
-      <!-- Chat Screen (Mobile: slides in when chat selected) -->
+      <!-- Chat Screen -->
       <div id="chat-screen" class="chat-screen hidden">
         <div class="chat-header">
           <button class="btn-icon" id="back-to-conversations">
             <span class="material-icons-round">arrow_back</span>
           </button>
-          <div class="chat-user-info">
+          <div class="chat-user-info" id="chat-user-info-click">
             <div class="chat-avatar" id="chat-avatar">—</div>
             <div class="chat-user-details">
               <span class="chat-name" id="chat-name">—</span>
@@ -153,6 +195,9 @@
 
         <div class="message-input-container">
           <form id="message-form" class="message-form">
+            <button type="button" class="btn-attach" id="attach-btn" title="Attach">
+              <span class="material-icons-round">add</span>
+            </button>
             <input type="text" id="message-input" class="message-input" placeholder="Type a message..." autocomplete="off">
             <button type="submit" class="btn-send" id="send-message-btn">
               <span class="material-icons-round">send</span>
@@ -213,7 +258,7 @@
             <span>Logout</span>
           </button>
         </div>
-        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0</p>
+        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
       </div>
     </div>
   </div>
@@ -259,8 +304,17 @@
   </div>
 
   <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+
+  <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Offline Indicator -->
+  <div class="offline-indicator">
+    <span class="material-icons-round" style="font-size: 14px;">wifi_off</span>
+    You are offline
+  </div>
+
+  <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/api.js"></script>
@@ -269,6 +323,7 @@
   <script src="js/qrcode.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
