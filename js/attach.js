@@ -1,6 +1,5 @@
 // ============================================================
-//  ATTACH MENU & MEDIA SENDING
-//  File uploads go to Google Drive folder, link sent as message
+//  ATTACH MENU & MEDIA SENDING (with Drive upload)
 // ============================================================
 
 const DRIVE_FOLDER_ID = '1l8SlFbyW8XN02npD2TJJvNCkseCCovjW';
@@ -75,80 +74,98 @@ function closeAttachMenu() {
   document.getElementById('attach-menu')?.classList.add('hidden');
 }
 
-// ── File Upload via Google Drive API ─────────────────────────
+// ── File Upload with Drive ─────────────────────────────────────
 async function handleFileUpload(event, type) {
   const file = event.target.files[0];
   event.target.value = '';
+  
   if (!file || !activeConversation) return;
-
-  // Show size limit (25MB for Drive API without OAuth we can't upload)
-  // Since we don't have OAuth token here, we send a link message explaining
-  // In a real setup this would use Drive API with service account or picker
-  // For now: use a local object URL as preview and inform the user
-
+  
   const sizeMB = (file.size / 1024 / 1024).toFixed(1);
   if (file.size > 25 * 1024 * 1024) {
     toast(`File too large (${sizeMB}MB). Max 25MB.`, 'error');
     return;
   }
 
-  toast('Uploading...', 'info');
+  // Create optimistic message
+  const tempId = 'temp_' + Date.now();
+  const tempMessage = {
+    id: tempId,
+    conversationId: activeConversation.conversationId,
+    senderId: currentUser.id,
+    content: 'Uploading...',
+    type: type,
+    fileName: file.name,
+    timestamp: new Date().toISOString(),
+    pending: true
+  };
+
+  // Add to cache and render
+  const messages = messagesCache.get(activeConversation.conversationId) || [];
+  messages.push(tempMessage);
+  messagesCache.set(activeConversation.conversationId, messages);
+  renderMessages(activeConversation.conversationId);
+  updateConversationLastMessage(activeConversation.conversationId, `📎 ${file.name}`);
+  scrollToBottom();
 
   try {
-    // Try to upload to Google Drive via the Apps Script backend
+    // Convert file to base64
     const base64 = await fileToBase64(file);
-    const result = await callAPI({
-      action: 'uploadFile',
-      userId: currentUser.id,
-      fileName: file.name,
-      mimeType: file.type,
-      fileData: base64,
-      folderId: DRIVE_FOLDER_ID
-    });
-
+    
+    // Upload via API
+    const result = await uploadFile(file.name, file.type || 'application/octet-stream', base64);
+    
     if (result.success && result.fileUrl) {
-      // Send file URL as message
-      addOptimisticMessage({
-        content: result.fileUrl,
-        type: type,
-        fileName: file.name
-      });
+      // Replace optimistic message with real one
+      const messages = messagesCache.get(activeConversation.conversationId) || [];
+      const index = messages.findIndex(m => m.id === tempId);
+      if (index !== -1) {
+        messages[index] = {
+          ...messages[index],
+          content: result.fileUrl,
+          fileId: result.fileId,
+          pending: false
+        };
+        messagesCache.set(activeConversation.conversationId, messages);
+        renderMessages(activeConversation.conversationId);
+      }
+      
+      // Also send the file URL as a regular message to persist it
+      await sendMessage(activeConversation.conversationId, result.fileUrl);
       toast('File sent!', 'success');
     } else {
-      // Fallback: create object URL for local preview during session
-      const objectUrl = URL.createObjectURL(file);
-      addOptimisticMessage({
-        content: objectUrl,
-        type: type,
-        fileName: file.name
-      });
-      toast('Sent (local preview — Drive upload unavailable)', 'info');
+      markMessageFailed(tempId);
+      toast('Upload failed: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (err) {
     console.error('Upload error:', err);
-    // Local fallback
-    const objectUrl = URL.createObjectURL(file);
-    addOptimisticMessage({
-      content: objectUrl,
-      type: type,
-      fileName: file.name
-    });
-    toast('Sent (local preview)', 'info');
+    markMessageFailed(tempId);
+    toast('Upload failed. Check connection.', 'error');
   }
 }
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// ── Voice Recording ───────────────────────────────────────────
+function markMessageFailed(tempId) {
+  const messages = messagesCache.get(activeConversation.conversationId) || [];
+  const index = messages.findIndex(m => m.id === tempId);
+  if (index !== -1) {
+    messages[index].pending = false;
+    messages[index].failed = true;
+    messages[index].content = 'Failed to send';
+    renderMessages(activeConversation.conversationId);
+  }
+}
+
+// ── Voice Recording (unchanged) ─────────────────────────────────
 function openVoiceModal() {
-  // Reset state
   recordedBlob = null;
   isRecording = false;
   voiceSeconds = 0;
@@ -190,10 +207,8 @@ function updateVoiceUI(state) {
 
 async function toggleVoiceRecording() {
   if (isRecording) {
-    // Stop
     stopVoiceRecording();
   } else {
-    // Start
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunks = [];
@@ -218,11 +233,8 @@ async function toggleVoiceRecording() {
         const s = String(voiceSeconds % 60).padStart(2, '0');
         const timer = document.getElementById('voice-timer');
         if (timer) timer.textContent = `${m}:${s}`;
-
-        // Auto-stop at 3 minutes
         if (voiceSeconds >= 180) stopVoiceRecording();
       }, 1000);
-
     } catch (err) {
       toast('Microphone access denied', 'error');
     }
@@ -256,5 +268,3 @@ function sendVoiceMessage() {
 
 // Init on load
 document.addEventListener('DOMContentLoaded', initAttach);
-// Also init after messenger is ready (called from messaging.js indirectly)
-window.initAttach = initAttach;

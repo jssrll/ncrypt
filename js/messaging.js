@@ -1,5 +1,5 @@
 // ============================================================
-//  MESSAGING - FIXED & COMPLETE
+//  MESSAGING - COMPLETE WITH ATTACHMENT SUPPORT
 // ============================================================
 
 function initializeMessenger() {
@@ -40,12 +40,20 @@ function renderConversationsList() {
     const last = conv.lastMessage || {};
     const active = activeConversation?.conversationId === conv.conversationId;
 
+    // Format last message preview based on type
+    let previewText = '';
+    if (last.type === 'image') previewText = '📷 Image';
+    else if (last.type === 'video') previewText = '🎬 Video';
+    else if (last.type === 'audio') previewText = '🎤 Voice message';
+    else if (last.type === 'file') previewText = `📎 ${last.fileName || 'File'}`;
+    else previewText = last.content || 'No messages yet';
+
     return `
       <div class="conversation-item${active ? ' active' : ''}" data-id="${conv.conversationId}">
         <div class="conv-avatar">${getInitials(other.name)}</div>
         <div class="conv-info">
           <div class="conv-name">${escapeHtml(other.name || 'Unknown')}</div>
-          <div class="conv-last-message">${escapeHtml(last.content || 'No messages yet')}</div>
+          <div class="conv-last-message">${escapeHtml(previewText)}</div>
         </div>
         <div class="conv-meta">
           <span class="conv-time">${formatDate(last.timestamp)}</span>
@@ -87,12 +95,31 @@ async function openConversation(conversation) {
 async function loadMessages(conversationId) {
   const result = await getMessages(conversationId);
   if (result.success) {
-    messagesCache.set(conversationId, result.messages || []);
+    // Enhance messages with type detection (if not already set)
+    const enhancedMessages = (result.messages || []).map(msg => {
+      if (!msg.type) {
+        // Auto-detect type from content
+        if (msg.content && msg.content.includes('?id=')) {
+          // It's a file URL from our Drive proxy
+          msg.type = 'file';
+        } else if (msg.content && msg.content.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+          msg.type = 'image';
+        } else if (msg.content && msg.content.match(/\.(mp4|webm|mov)/i)) {
+          msg.type = 'video';
+        } else if (msg.content && msg.content.match(/\.(mp3|wav|ogg)/i)) {
+          msg.type = 'audio';
+        } else {
+          msg.type = 'text';
+        }
+      }
+      return msg;
+    });
+    messagesCache.set(conversationId, enhancedMessages);
     renderMessages(conversationId);
   }
 }
 
-// Render messages
+// Render messages with full attachment support
 function renderMessages(conversationId) {
   const container = document.getElementById('messages-container');
   const messages = messagesCache.get(conversationId) || [];
@@ -121,25 +148,54 @@ function renderMessages(conversationId) {
     const isOutgoing = msg.senderId === currentUser.id;
     const bubbleClass = msg.pending ? 'pending' : msg.failed ? 'failed' : '';
 
-    // Handle different message types
+    // Render based on message type
     let contentHtml = '';
-    if (msg.type === 'image') {
-      contentHtml = `<img src="${msg.content}" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" loading="lazy">`;
-    } else if (msg.type === 'video') {
-      contentHtml = `<video src="${msg.content}" controls style="max-width:200px;border-radius:8px;display:block;margin-bottom:4px;"></video>`;
-    } else if (msg.type === 'audio') {
-      contentHtml = `<audio src="${msg.content}" controls style="max-width:220px;display:block;margin-bottom:4px;"></audio>`;
-    } else if (msg.type === 'file') {
-      contentHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="material-icons-round">insert_drive_file</span><span style="font-size:13px;">${escapeHtml(msg.fileName || 'File')}</span></div>`;
+    const msgType = msg.type || 'text';
+
+    if (msgType === 'image') {
+      contentHtml = `
+        <a href="${msg.content}" target="_blank">
+          <img src="${msg.content}" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" loading="lazy" onerror="this.style.display='none'">
+        </a>
+      `;
+    } else if (msgType === 'video') {
+      contentHtml = `
+        <video src="${msg.content}" controls style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" onerror="this.style.display='none'">
+          Your browser does not support the video tag.
+        </video>
+      `;
+    } else if (msgType === 'audio') {
+      contentHtml = `
+        <audio src="${msg.content}" controls style="max-width:220px;display:block;margin-bottom:4px;">
+          Your browser does not support the audio element.
+        </audio>
+      `;
+    } else if (msgType === 'file') {
+      // For file attachments, show a download link with icon
+      contentHtml = `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(0,0,0,0.03);border-radius:8px;margin-bottom:4px;">
+          <span class="material-icons-round" style="font-size:28px;color:var(--accent);">insert_drive_file</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(msg.fileName || 'File')}</div>
+            <a href="${msg.content}" download="${msg.fileName || 'file'}" target="_blank" style="color:var(--accent);font-size:12px;text-decoration:none;">
+              Download
+            </a>
+          </div>
+        </div>
+      `;
     } else {
-      contentHtml = escapeHtml(msg.content);
+      contentHtml = escapeHtml(msg.content).replace(/\n/g, '<br>');
     }
 
     html += `
       <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
         <div class="message-bubble ${bubbleClass}">
           ${contentHtml}
-          <div class="message-time">${formatMessageTime(msg.timestamp)}${msg.pending ? ' · Sending...' : msg.failed ? ' · Failed' : ''}</div>
+          <div class="message-time">
+            ${formatMessageTime(msg.timestamp)}
+            ${msg.pending ? ' · Sending...' : ''}
+            ${msg.failed ? ' · Failed' : ''}
+          </div>
         </div>
       </div>`;
   });
@@ -188,7 +244,14 @@ function addOptimisticMessage(msgData) {
   messages.push(tempMessage);
   messagesCache.set(activeConversation.conversationId, messages);
   renderMessages(activeConversation.conversationId);
-  updateConversationLastMessage(activeConversation.conversationId, msgData.content || '[Attachment]');
+  
+  // Update conversation preview
+  let preview = msgData.content;
+  if (msgData.type === 'image') preview = '📷 Image';
+  else if (msgData.type === 'video') preview = '🎬 Video';
+  else if (msgData.type === 'audio') preview = '🎤 Voice message';
+  else if (msgData.type === 'file') preview = `📎 ${msgData.fileName || 'File'}`;
+  updateConversationLastMessage(activeConversation.conversationId, preview);
 
   sendMessageAsync(activeConversation.conversationId, msgData.content, tempId);
 }
@@ -209,12 +272,19 @@ async function sendMessageAsync(conversationId, content, tempId) {
     const index = messages.findIndex(m => m.id === tempId);
     if (result.success) {
       if (index !== -1) {
-        messages[index] = { ...result.message, pending: false };
+        messages[index] = { 
+          ...result.message, 
+          pending: false,
+          type: messages[index].type // preserve type
+        };
         messagesCache.set(conversationId, messages);
       }
       await loadConversations();
     } else {
-      if (index !== -1) { messages[index].pending = false; messages[index].failed = true; }
+      if (index !== -1) { 
+        messages[index].pending = false; 
+        messages[index].failed = true; 
+      }
       toast('Failed to send', 'error');
     }
     renderMessages(conversationId);
@@ -222,7 +292,10 @@ async function sendMessageAsync(conversationId, content, tempId) {
     console.error('Send error:', err);
     const messages = messagesCache.get(conversationId) || [];
     const index = messages.findIndex(m => m.id === tempId);
-    if (index !== -1) { messages[index].pending = false; messages[index].failed = true; }
+    if (index !== -1) { 
+      messages[index].pending = false; 
+      messages[index].failed = true; 
+    }
     renderMessages(conversationId);
   }
 }
@@ -345,7 +418,7 @@ function setupMessengerEvents() {
   document.getElementById('chat-user-info-click').addEventListener('click', openContactInfo);
 }
 
-// Polling
+// Polling for new messages
 function startMessagePolling() {
   stopMessagePolling();
   messagePollingInterval = setInterval(async () => {
@@ -356,9 +429,21 @@ function startMessagePolling() {
       if (result.success) {
         const current = messagesCache.get(activeConversation.conversationId) || [];
         const fresh = result.messages || [];
+        // Only update if there are new messages and no pending ones
         const hasPending = current.some(m => m.pending);
         if (fresh.length > current.length && !hasPending) {
-          messagesCache.set(activeConversation.conversationId, fresh);
+          // Enhance fresh messages with types
+          const enhancedFresh = fresh.map(msg => {
+            if (!msg.type) {
+              if (msg.content && msg.content.includes('?id=')) msg.type = 'file';
+              else if (msg.content && msg.content.match(/\.(jpg|jpeg|png|gif|webp)/i)) msg.type = 'image';
+              else if (msg.content && msg.content.match(/\.(mp4|webm|mov)/i)) msg.type = 'video';
+              else if (msg.content && msg.content.match(/\.(mp3|wav|ogg)/i)) msg.type = 'audio';
+              else msg.type = 'text';
+            }
+            return msg;
+          });
+          messagesCache.set(activeConversation.conversationId, enhancedFresh);
           renderMessages(activeConversation.conversationId);
         }
       }
@@ -367,15 +452,19 @@ function startMessagePolling() {
 }
 
 function stopMessagePolling() {
-  if (messagePollingInterval) { clearInterval(messagePollingInterval); messagePollingInterval = null; }
+  if (messagePollingInterval) { 
+    clearInterval(messagePollingInterval); 
+    messagePollingInterval = null; 
+  }
 }
 
+// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   stopMessagePolling();
   if (typeof qrStream !== 'undefined' && qrStream) qrStream.getTracks().forEach(t => t.stop());
 });
 
-// Exports
+// Exports for global access
 window.openConversation = openConversation;
 window.closeChat = closeChat;
 window.renderConversationsList = renderConversationsList;

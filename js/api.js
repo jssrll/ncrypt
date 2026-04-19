@@ -138,3 +138,20 @@ async function registerUser(name, email, passwordHash) {
     throw err;
   }
 }
+
+// Upload file to Google Drive
+async function uploadFile(fileName, mimeType, fileData) {
+  try {
+    const result = await callAPI({
+      action: 'uploadFile',
+      userId: currentUser?.id,
+      fileName,
+      mimeType,
+      fileData
+    });
+    return result;
+  } catch (err) {
+    console.error('Upload file error:', err);
+    return { success: false, message: 'Upload failed' };
+  }
+}
