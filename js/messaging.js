@@ -1,0 +1,331 @@
+// ============================================================
+//  MESSAGING & CONVERSATION LOGIC
+// ============================================================
+
+// Initialize messenger
+function initializeMessenger() {
+  if (!currentUser) return;
+  
+  // Update sidebar user info
+  updateSidebarUserInfo();
+  
+  // Load conversations
+  loadConversations();
+  
+  // Set up event listeners
+  setupMessengerEvents();
+  
+  // Start polling for new messages
+  startMessagePolling();
+}
+
+// Update sidebar user info
+function updateSidebarUserInfo() {
+  document.getElementById('sidebar-name').textContent = currentUser.name;
+  document.getElementById('sidebar-id').textContent = `@${currentUser.id?.slice(0, 8) || '—'}`;
+  document.getElementById('sidebar-avatar').textContent = getInitials(currentUser.name);
+}
+
+// Load conversations
+async function loadConversations() {
+  const result = await getConversations();
+  
+  if (result.success) {
+    conversations = result.conversations || [];
+    renderConversationsList();
+  }
+}
+
+// Render conversations list
+function renderConversationsList() {
+  const container = document.getElementById('conversations-list');
+  
+  if (conversations.length === 0) {
+    container.innerHTML = `
+      <div class="no-results" style="padding: 32px 16px; text-align: center;">
+        <span class="material-icons-round" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;">chat</span>
+        <p style="color: var(--text-secondary); font-size: 14px;">No conversations yet</p>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Search for a user to start chatting</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = conversations.map(conv => {
+    const otherUser = conv.otherUser || {};
+    const lastMessage = conv.lastMessage || {};
+    const isActive = activeConversation?.conversationId === conv.conversationId;
+    
+    return `
+      <div class="conversation-item ${isActive ? 'active' : ''}" data-conversation-id="${conv.conversationId}">
+        <div class="conv-avatar">${getInitials(otherUser.name)}</div>
+        <div class="conv-info">
+          <div class="conv-name">${otherUser.name || 'Unknown'}</div>
+          <div class="conv-last-message">${lastMessage.content || 'No messages yet'}</div>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${formatDate(lastMessage.timestamp)}</span>
+          ${conv.unreadCount > 0 ? `<span class="conv-unread">${conv.unreadCount}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Add click listeners
+  container.querySelectorAll('.conversation-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const convId = item.dataset.conversationId;
+      const conversation = conversations.find(c => c.conversationId === convId);
+      if (conversation) {
+        openConversation(conversation);
+      }
+    });
+  });
+}
+
+// Open a conversation
+async function openConversation(conversation) {
+  activeConversation = conversation;
+  
+  // Update UI
+  document.getElementById('chat-empty-state').classList.add('hidden');
+  document.getElementById('chat-active').classList.remove('hidden');
+  
+  // Update chat header
+  const otherUser = conversation.otherUser || {};
+  document.getElementById('chat-avatar').textContent = getInitials(otherUser.name);
+  document.getElementById('chat-name').textContent = otherUser.name || 'Unknown';
+  
+  // Load messages
+  await loadMessages(conversation.conversationId);
+  
+  // Update active state in sidebar
+  renderConversationsList();
+  
+  // Scroll to bottom
+  scrollToBottom();
+}
+
+// Load messages for conversation
+async function loadMessages(conversationId) {
+  const result = await getMessages(conversationId);
+  
+  if (result.success) {
+    messagesCache.set(conversationId, result.messages || []);
+    renderMessages(conversationId);
+  }
+}
+
+// Render messages
+function renderMessages(conversationId) {
+  const container = document.getElementById('messages-container');
+  const messages = messagesCache.get(conversationId) || [];
+  
+  if (messages.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px;">chat_bubble_outline</span>
+        <p>No messages yet. Say hello! 👋</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = messages.map(msg => {
+    const isOutgoing = msg.senderId === currentUser.id;
+    
+    return `
+      <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
+        <div class="message-bubble">
+          ${escapeHtml(msg.content)}
+          <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  scrollToBottom();
+}
+
+// Send a message
+async function handleSendMessage(e) {
+  e.preventDefault();
+  
+  const input = document.getElementById('message-input');
+  const content = input.value.trim();
+  
+  if (!content || !activeConversation) return;
+  
+  const btn = document.getElementById('send-message-btn');
+  btn.disabled = true;
+  
+  try {
+    const result = await sendMessage(activeConversation.conversationId, content);
+    
+    if (result.success) {
+      input.value = '';
+      
+      // Add message to cache
+      const messages = messagesCache.get(activeConversation.conversationId) || [];
+      messages.push(result.message);
+      messagesCache.set(activeConversation.conversationId, messages);
+      
+      // Re-render
+      renderMessages(activeConversation.conversationId);
+      
+      // Refresh conversations list to update last message
+      await loadConversations();
+    } else {
+      toast('Failed to send message.', 'error');
+    }
+  } catch (err) {
+    console.error('Send message error:', err);
+    toast('Failed to send message.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Search users
+async function handleUserSearch(query) {
+  if (!query || query.length < 2) {
+    document.getElementById('search-results').classList.add('hidden');
+    return;
+  }
+  
+  const result = await searchUsers(query);
+  const resultsContainer = document.getElementById('search-results');
+  
+  if (!result.success || !result.users || result.users.length === 0) {
+    resultsContainer.innerHTML = '<div class="no-results">No users found</div>';
+    resultsContainer.classList.remove('hidden');
+    return;
+  }
+  
+  resultsContainer.innerHTML = result.users.map(user => `
+    <div class="search-result-item" data-user-id="${user.id}">
+      <div class="search-result-avatar">${getInitials(user.name)}</div>
+      <div class="search-result-info">
+        <div class="search-result-name">${escapeHtml(user.name)}</div>
+        <div class="search-result-id">@${user.id?.slice(0, 12) || '—'}</div>
+      </div>
+    </div>
+  `).join('');
+  
+  resultsContainer.classList.remove('hidden');
+  
+  // Add click listeners
+  resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const userId = item.dataset.userId;
+      await startConversationWithUser(userId);
+      resultsContainer.classList.add('hidden');
+      document.getElementById('user-search-input').value = '';
+    });
+  });
+}
+
+// Start conversation with user
+async function startConversationWithUser(userId) {
+  const result = await getOrCreateConversation(userId);
+  
+  if (result.success && result.conversation) {
+    // Check if conversation already exists in list
+    const existingConv = conversations.find(c => c.conversationId === result.conversation.conversationId);
+    
+    if (!existingConv) {
+      conversations.unshift(result.conversation);
+    }
+    
+    openConversation(result.conversation);
+    renderConversationsList();
+  } else {
+    toast('Failed to start conversation.', 'error');
+  }
+}
+
+// Close active chat
+function closeChat() {
+  activeConversation = null;
+  document.getElementById('chat-empty-state').classList.remove('hidden');
+  document.getElementById('chat-active').classList.add('hidden');
+  renderConversationsList();
+}
+
+// Scroll messages to bottom
+function scrollToBottom() {
+  const container = document.getElementById('messages-container');
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 50);
+}
+
+// Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Setup messenger event listeners
+function setupMessengerEvents() {
+  // User search
+  const searchInput = document.getElementById('user-search-input');
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      handleUserSearch(e.target.value.trim());
+    }, 300);
+  });
+  
+  // Hide search results when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-section')) {
+      document.getElementById('search-results').classList.add('hidden');
+    }
+  });
+  
+  // Message form
+  document.getElementById('message-form').addEventListener('submit', handleSendMessage);
+  
+  // Close chat
+  document.getElementById('close-chat').addEventListener('click', closeChat);
+  
+  // Logout
+  document.getElementById('sidebar-logout').addEventListener('click', logout);
+}
+
+// Start polling for new messages
+function startMessagePolling() {
+  stopMessagePolling();
+  
+  messagePollingInterval = setInterval(async () => {
+    if (!currentUser) return;
+    
+    // Refresh conversations list
+    await loadConversations();
+    
+    // If there's an active conversation, check for new messages
+    if (activeConversation) {
+      const result = await getMessages(activeConversation.conversationId);
+      if (result.success) {
+        const currentMessages = messagesCache.get(activeConversation.conversationId) || [];
+        const newMessages = result.messages || [];
+        
+        // Only update if there are new messages
+        if (newMessages.length > currentMessages.length) {
+          messagesCache.set(activeConversation.conversationId, newMessages);
+          renderMessages(activeConversation.conversationId);
+        }
+      }
+    }
+  }, 3000);
+}
+
+// Stop message polling
+function stopMessagePolling() {
+  if (messagePollingInterval) {
+    clearInterval(messagePollingInterval);
+    messagePollingInterval = null;
+  }
+}
