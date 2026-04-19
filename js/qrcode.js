@@ -28,41 +28,82 @@ function parseQRData(raw) {
 
 // Generate QR Code
 function generateUserQRCode() {
+  console.log('generateUserQRCode called');
+  console.log('currentUser:', currentUser);
+  
   if (!currentUser) { 
     toast('Not logged in', 'error'); 
     return; 
   }
+  
+  if (!currentUser.id) {
+    toast('User ID not found', 'error');
+    return;
+  }
 
   const container = document.getElementById('qr-container');
-  if (!container) return;
+  if (!container) {
+    console.error('QR container not found');
+    return;
+  }
 
+  // Clear and show loading
   container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);">Generating QR...</div>';
 
   const qrData = buildQRData(currentUser);
+  console.log('QR Data:', qrData);
 
+  // Check if QRCode library is available
+  if (typeof QRCode === 'undefined') {
+    console.error('QRCode library not loaded!');
+    container.innerHTML = `
+      <div style="padding:20px;text-align:center;">
+        <p style="color:#DC2626;margin-bottom:8px;">QR library failed to load</p>
+        <p style="color:var(--text-muted);font-size:13px;">Your ID:</p>
+        <p style="font-family:monospace;font-size:12px;word-break:break-all;background:var(--bg-sidebar);padding:12px;border-radius:8px;margin-top:8px;">${currentUser.id}</p>
+      </div>`;
+    return;
+  }
+
+  // Small delay to ensure modal is fully rendered
   setTimeout(() => {
+    // Clear container
     container.innerHTML = '';
+    
+    // Create canvas element
     const canvas = document.createElement('canvas');
     canvas.id = 'qr-canvas';
     canvas.style.width = '220px';
     canvas.style.height = '220px';
+    canvas.style.margin = '0 auto';
+    canvas.style.display = 'block';
     container.appendChild(canvas);
 
+    console.log('Canvas created, generating QR...');
+
+    // Generate QR code
     QRCode.toCanvas(canvas, qrData, {
       width: 220,
       margin: 2,
-      color: { dark: '#1A1A1E', light: '#FFFFFF' }
-    }, err => {
+      color: { 
+        dark: '#1A1A1E', 
+        light: '#FFFFFF' 
+      }
+    }, (err) => {
       if (err) {
-        console.error('QR error:', err);
+        console.error('QR generation error:', err);
+        // Fallback: show user ID as text
         container.innerHTML = `
           <div style="padding:20px;text-align:center;">
-            <p style="color:var(--text-muted);margin-bottom:8px;font-size:13px;">Your ID (scan this):</p>
-            <p style="font-family:monospace;font-size:11px;word-break:break-all;background:var(--bg-sidebar);padding:12px;border-radius:8px;">${currentUser.id}</p>
+            <p style="color:#DC2626;margin-bottom:8px;">Failed to generate QR</p>
+            <p style="color:var(--text-muted);font-size:13px;">Share this ID instead:</p>
+            <p style="font-family:monospace;font-size:12px;word-break:break-all;background:var(--bg-sidebar);padding:12px;border-radius:8px;margin-top:8px;">${currentUser.id}</p>
           </div>`;
+      } else {
+        console.log('QR code generated successfully!');
       }
     });
-  }, 100);
+  }, 200);
 }
 
 // Download QR
