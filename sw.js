@@ -7,7 +7,7 @@ const CACHE_NAME = 'ncrypt-v1.0.0';
 const DYNAMIC_CACHE = 'ncrypt-dynamic-v1';
 const API_CACHE = 'ncrypt-api-v1';
 
-// Assets to cache on install
+// At the top of sw.js, update STATIC_ASSETS:
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -21,19 +21,10 @@ const STATIC_ASSETS = [
   '/js/profile.js',
   '/js/settings.js',
   '/js/ui.js',
+  '/js/pwa.js',
   '/manifest.json',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png',
-  'https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap',
-  'https://fonts.googleapis.com/icon?family=Material+Icons+Round',
-  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
+  '/icons/icon-512x512.png'
 ];
 
 // Install event - cache static assets

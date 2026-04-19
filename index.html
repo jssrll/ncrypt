@@ -243,25 +243,31 @@
     </div>
   </div>
 
-  <!-- Settings Modal -->
-  <div id="settings-modal" class="modal hidden">
-    <div class="modal-overlay"></div>
-    <div class="modal-container">
-      <div class="modal-header">
-        <h2>Settings</h2>
-        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-overlay"></div>
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <!-- Install App Button - Will be shown when installable -->
+        <button class="settings-btn" id="pwa-install-btn" style="display: none;">
+          <span class="material-icons-round">download</span>
+          <span>Install App</span>
+        </button>
+        
+        <button class="settings-btn danger" id="settings-logout-btn">
+          <span class="material-icons-round">logout</span>
+          <span>Logout</span>
+        </button>
       </div>
-      <div class="modal-body">
-        <div class="settings-section">
-          <button class="settings-btn danger" id="settings-logout-btn">
-            <span class="material-icons-round">logout</span>
-            <span>Logout</span>
-          </button>
-        </div>
-        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
-      </div>
+      <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
     </div>
   </div>
+</div>
 
   <!-- QR Code Modal -->
   <div id="qr-modal" class="modal hidden">

@@ -1,5 +1,5 @@
 // ============================================================
-//  PWA FUNCTIONALITY
+//  PWA FUNCTIONALITY - FIXED FOR VER CEL/GITHUB PAGES
 // ============================================================
 
 let deferredPrompt = null;
@@ -7,20 +7,17 @@ let serviceWorkerRegistration = null;
 
 // Initialize PWA features
 function initPWA() {
-  // Register service worker
+  // Register service worker with correct scope
   registerServiceWorker();
   
   // Setup install prompt
   setupInstallPrompt();
   
-  // Setup push notifications
-  setupPushNotifications();
-  
   // Setup network status
   setupNetworkStatus();
   
-  // Setup background sync
-  setupBackgroundSync();
+  // Check if already installed
+  checkInstalledStatus();
 }
 
 // Register service worker
@@ -31,6 +28,7 @@ async function registerServiceWorker() {
   }
   
   try {
+    // Use correct path for Vercel/GitHub Pages
     serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/'
     });
@@ -43,19 +41,22 @@ async function registerServiceWorker() {
       
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // New update available
           showUpdateNotification();
         }
       });
     });
     
-    // Listen for messages from service worker
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      handleServiceWorkerMessage(event.data);
-    });
-    
   } catch (err) {
     console.error('[PWA] Service worker registration failed:', err);
+    // Try alternative path for Vercel
+    try {
+      serviceWorkerRegistration = await navigator.serviceWorker.register('./sw.js', {
+        scope: './'
+      });
+      console.log('[PWA] Service worker registered with relative path');
+    } catch (err2) {
+      console.error('[PWA] All registration attempts failed');
+    }
   }
 }
 
@@ -64,7 +65,7 @@ function showUpdateNotification() {
   const updateBar = document.createElement('div');
   updateBar.className = 'update-notification';
   updateBar.innerHTML = `
-    <span>New version available!</span>
+    <span>🔄 New version available!</span>
     <button id="update-app">Update</button>
   `;
   
@@ -72,19 +73,17 @@ function showUpdateNotification() {
   
   document.getElementById('update-app').addEventListener('click', () => {
     updateBar.remove();
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    });
-    
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    if (serviceWorkerRegistration && serviceWorkerRegistration.waiting) {
+      serviceWorkerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    setTimeout(() => window.location.reload(), 500);
   });
 }
 
 // Setup install prompt
 function setupInstallPrompt() {
   window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('[PWA] beforeinstallprompt fired!');
     e.preventDefault();
     deferredPrompt = e;
     
@@ -95,102 +94,111 @@ function setupInstallPrompt() {
   window.addEventListener('appinstalled', () => {
     console.log('[PWA] App installed');
     deferredPrompt = null;
-    toast('ncrypt installed successfully!', 'success');
     hideInstallButton();
+    toast('✅ ncrypt installed successfully!', 'success');
   });
+}
+
+// Check if app is already installed
+function checkInstalledStatus() {
+  if (isAppInstalled()) {
+    console.log('[PWA] App is installed (standalone mode)');
+    hideInstallButton();
+  }
+  
+  // For iOS - show instructions
+  if (isIOS() && !isAppInstalled()) {
+    showIOSInstallInstructions();
+  }
 }
 
 // Show install button
 function showInstallButton() {
-  const settingsSection = document.querySelector('.settings-section:last-child');
-  if (!settingsSection) return;
-  
-  const existingBtn = document.getElementById('pwa-install-btn');
-  if (existingBtn) return;
-  
-  const installBtn = document.createElement('button');
-  installBtn.id = 'pwa-install-btn';
-  installBtn.className = 'settings-btn';
-  installBtn.innerHTML = `
-    <span class="material-icons-round">download</span>
-    <span>Install App</span>
-  `;
-  installBtn.addEventListener('click', promptInstall);
-  
-  settingsSection.insertBefore(installBtn, settingsSection.firstChild);
+  const installBtn = document.getElementById('pwa-install-btn');
+  if (installBtn) {
+    installBtn.style.display = 'flex';
+    installBtn.addEventListener('click', promptInstall);
+  }
 }
 
 // Hide install button
 function hideInstallButton() {
   const btn = document.getElementById('pwa-install-btn');
-  if (btn) btn.remove();
+  if (btn) btn.style.display = 'none';
 }
 
 // Prompt for installation
 async function promptInstall() {
   if (!deferredPrompt) {
-    toast('App is already installed or not available', 'info');
+    // Check if already installed
+    if (isAppInstalled()) {
+      toast('App is already installed!', 'info');
+      return;
+    }
+    
+    // For iOS - show manual instructions
+    if (isIOS()) {
+      showIOSInstallInstructions();
+      return;
+    }
+    
+    toast('Installation not available. Try refreshing.', 'info');
     return;
   }
   
-  deferredPrompt.prompt();
-  
-  const { outcome } = await deferredPrompt.userChoice;
-  console.log(`[PWA] User response: ${outcome}`);
-  
-  deferredPrompt = null;
-  hideInstallButton();
-}
-
-// Setup push notifications
-async function setupPushNotifications() {
-  if (!('Notification' in window) || !('PushManager' in window)) {
-    console.log('[PWA] Push notifications not supported');
-    return;
-  }
-  
-  const permission = await Notification.permission;
-  
-  if (permission === 'granted') {
-    await subscribeToPushNotifications();
-  }
-}
-
-// Subscribe to push notifications
-async function subscribeToPushNotifications() {
   try {
-    const registration = await navigator.serviceWorker.ready;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`[PWA] User response: ${outcome}`);
     
-    // Get public key from server (you'll need to implement VAPID)
-    // For now, we'll just check permission
+    if (outcome === 'accepted') {
+      toast('Installing ncrypt...', 'success');
+    }
     
-    console.log('[PWA] Push notifications ready');
-    
-    // Store preference
-    localStorage.setItem('ncrypt_notifications', 'true');
-    
+    deferredPrompt = null;
+    hideInstallButton();
   } catch (err) {
-    console.error('[PWA] Push subscription failed:', err);
+    console.error('[PWA] Install prompt error:', err);
+    toast('Installation failed', 'error');
   }
 }
 
-// Request notification permission
-async function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    toast('Notifications not supported', 'error');
-    return false;
-  }
+// Show iOS installation instructions
+function showIOSInstallInstructions() {
+  const settingsSection = document.querySelector('.settings-section');
+  if (!settingsSection) return;
   
-  const permission = await Notification.requestPermission();
+  const existingInstructions = document.getElementById('ios-install-instructions');
+  if (existingInstructions) return;
   
-  if (permission === 'granted') {
-    await subscribeToPushNotifications();
-    toast('Notifications enabled', 'success');
-    return true;
-  } else {
-    toast('Notifications denied', 'error');
-    return false;
-  }
+  const instructions = document.createElement('div');
+  instructions.id = 'ios-install-instructions';
+  instructions.style.cssText = `
+    background: var(--accent-light);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  `;
+  instructions.innerHTML = `
+    <p style="font-weight: 600; margin-bottom: 8px;">📱 Install on iOS:</p>
+    <p>1. Tap <strong>Share</strong> button in Safari</p>
+    <p>2. Scroll down and tap <strong>"Add to Home Screen"</strong></p>
+    <p>3. Tap <strong>"Add"</strong></p>
+  `;
+  
+  settingsSection.insertBefore(instructions, settingsSection.firstChild);
+}
+
+// Check if iOS
+function isIOS() {
+  return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+}
+
+// Check if app is installed
+function isAppInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
 }
 
 // Setup network status
@@ -198,10 +206,9 @@ function setupNetworkStatus() {
   const updateOnlineStatus = () => {
     if (navigator.onLine) {
       document.body.classList.remove('offline');
-      toast('Back online', 'success');
     } else {
       document.body.classList.add('offline');
-      toast('You are offline', 'info');
+      toast('📴 You are offline', 'info');
     }
   };
   
@@ -213,90 +220,60 @@ function setupNetworkStatus() {
   }
 }
 
-// Setup background sync
-async function setupBackgroundSync() {
-  if (!('serviceWorker' in navigator) || !('SyncManager' in window)) {
-    console.log('[PWA] Background sync not supported');
-    return;
-  }
-  
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    
-    // Check if periodic sync is available
-    if ('periodicSync' in registration) {
-      const status = await navigator.permissions.query({
-        name: 'periodic-background-sync'
-      });
-      
-      if (status.state === 'granted') {
-        await registration.periodicSync.register('check-messages', {
-          minInterval: 60 * 60 * 1000 // 1 hour
-        });
-        console.log('[PWA] Periodic sync registered');
-      }
-    }
-  } catch (err) {
-    console.error('[PWA] Background sync setup failed:', err);
-  }
-}
-
-// Handle service worker messages
-function handleServiceWorkerMessage(data) {
-  if (!data) return;
-  
-  switch (data.type) {
-    case 'BACKGROUND_CHECK':
-      // Trigger message check
-      if (currentUser) {
-        loadConversations();
-      }
-      break;
-      
-    case 'OFFLINE_MESSAGE_SYNCED':
-      toast('Messages synced', 'success');
-      break;
-  }
-}
-
-// Save offline message
-async function saveOfflineMessage(url, data) {
-  if (!serviceWorkerRegistration) return;
-  
-  if (serviceWorkerRegistration.active) {
-    serviceWorkerRegistration.active.postMessage({
-      type: 'SAVE_OFFLINE_MESSAGE',
-      url,
-      data
-    });
-  }
-}
-
-// Check if app is installed
-function isAppInstalled() {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         window.navigator.standalone === true;
-}
-
-// Get PWA install status
+// Get PWA status
 function getPWAStatus() {
   return {
     installed: isAppInstalled(),
     serviceWorker: !!serviceWorkerRegistration,
-    notifications: Notification.permission,
-    online: navigator.onLine
+    installable: !!deferredPrompt,
+    online: navigator.onLine,
+    isIOS: isIOS()
   };
+}
+
+// Manual install trigger (can be called from console)
+function manualInstall() {
+  if (deferredPrompt) {
+    promptInstall();
+  } else {
+    console.log('[PWA] Status:', getPWAStatus());
+    toast('Check console for PWA status', 'info');
+  }
 }
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   initPWA();
+  
+  // Log status for debugging
+  setTimeout(() => {
+    console.log('[PWA] Status:', getPWAStatus());
+  }, 2000);
 });
 
 // Expose to window
 window.pwa = {
-  requestNotificationPermission,
   promptInstall,
   getPWAStatus,
-  isAppInstalled
+  isAppInstalled,
+  manualInstall
 };
+
+// Add manual install button to settings if needed
+function addManualInstallButton() {
+  const settingsSection = document.querySelector('.settings-section');
+  if (!settingsSection) return;
+  
+  const btn = document.createElement('button');
+  btn.className = 'settings-btn';
+  btn.innerHTML = `
+    <span class="material-icons-round">download</span>
+    <span>Install App (Manual)</span>
+  `;
+  btn.onclick = manualInstall;
+  
+  settingsSection.insertBefore(btn, settingsSection.firstChild);
+}
+
+// Try to show manual button if automatic doesn't work
+setTimeout(addManualInstallButton, 3000);
