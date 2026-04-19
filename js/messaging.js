@@ -1,16 +1,12 @@
 // ============================================================
-//  MESSAGING - OPTIMIZED FOR SPEED
+//  MESSAGING - FIXED & COMPLETE
 // ============================================================
 
-// Initialize messenger
 function initializeMessenger() {
   if (!currentUser) return;
-
-  // sidebar-name / sidebar-id / sidebar-avatar don't exist in HTML — removed
   loadConversations();
   setupMessengerEvents();
   startMessagePolling();
-
   initProfile();
   initSettings();
 }
@@ -18,7 +14,6 @@ function initializeMessenger() {
 // Load conversations
 async function loadConversations() {
   const result = await getConversations();
-
   if (result.success) {
     conversations = result.conversations || [];
     renderConversationsList();
@@ -28,15 +23,15 @@ async function loadConversations() {
 // Render conversations list
 function renderConversationsList() {
   const container = document.getElementById('conversations-list');
+  if (!container) return;
 
   if (!conversations.length) {
     container.innerHTML = `
-      <div class="no-results" style="padding: 32px 16px; text-align: center;">
-        <span class="material-icons-round" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;">chat</span>
-        <p style="color: var(--text-secondary); font-size: 14px;">No conversations yet</p>
-        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Search for a user to start chatting</p>
-      </div>
-    `;
+      <div style="padding:48px 16px;text-align:center;">
+        <span class="material-icons-round" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:12px;">chat_bubble_outline</span>
+        <p style="color:var(--text-secondary);font-size:15px;font-weight:600;margin-bottom:4px;">No conversations yet</p>
+        <p style="color:var(--text-muted);font-size:13px;">Search for someone to start chatting</p>
+      </div>`;
     return;
   }
 
@@ -46,18 +41,17 @@ function renderConversationsList() {
     const active = activeConversation?.conversationId === conv.conversationId;
 
     return `
-      <div class="conversation-item ${active ? 'active' : ''}" data-id="${conv.conversationId}">
+      <div class="conversation-item${active ? ' active' : ''}" data-id="${conv.conversationId}">
         <div class="conv-avatar">${getInitials(other.name)}</div>
         <div class="conv-info">
           <div class="conv-name">${escapeHtml(other.name || 'Unknown')}</div>
-          <div class="conv-last-message">${escapeHtml(last.content || '') || 'No messages'}</div>
+          <div class="conv-last-message">${escapeHtml(last.content || 'No messages yet')}</div>
         </div>
         <div class="conv-meta">
           <span class="conv-time">${formatDate(last.timestamp)}</span>
           ${conv.unreadCount ? `<span class="conv-unread">${conv.unreadCount}</span>` : ''}
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 
   container.innerHTML = html;
@@ -74,12 +68,9 @@ function renderConversationsList() {
 async function openConversation(conversation) {
   activeConversation = conversation;
 
-  // FIX: HTML has no chat-empty-state / chat-active split.
-  // Instead show the chat-screen and hide conversations-screen on mobile.
-  const chatScreen = document.getElementById('chat-screen');
-  const convsScreen = document.getElementById('conversations-screen');
-  chatScreen.classList.remove('hidden');
-  convsScreen.classList.add('hidden');
+  // Show chat screen, hide conversations on mobile
+  document.getElementById('chat-screen').classList.remove('hidden');
+  document.getElementById('conversations-screen').classList.add('hidden');
 
   const other = conversation.otherUser || {};
   document.getElementById('chat-avatar').textContent = getInitials(other.name);
@@ -95,7 +86,6 @@ async function openConversation(conversation) {
 // Load messages
 async function loadMessages(conversationId) {
   const result = await getMessages(conversationId);
-
   if (result.success) {
     messagesCache.set(conversationId, result.messages || []);
     renderMessages(conversationId);
@@ -109,17 +99,16 @@ function renderMessages(conversationId) {
 
   if (!messages.length) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-        <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px;">chat_bubble_outline</span>
-        <p>No messages yet. Say hello! 👋</p>
-      </div>
-    `;
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);">
+        <span class="material-icons-round" style="font-size:52px;margin-bottom:12px;">waving_hand</span>
+        <p style="font-size:15px;font-weight:600;color:var(--text-secondary);">Say hello!</p>
+        <p style="font-size:13px;margin-top:4px;">Start the conversation 👋</p>
+      </div>`;
     return;
   }
 
   const fragment = document.createDocumentFragment();
   const tempDiv = document.createElement('div');
-
   let html = '';
   let lastDate = '';
 
@@ -129,60 +118,69 @@ function renderMessages(conversationId) {
       lastDate = msgDate;
       html += `<div class="message-date-separator"><span>${getDateLabel(msg.timestamp)}</span></div>`;
     }
-
     const isOutgoing = msg.senderId === currentUser.id;
     const bubbleClass = msg.pending ? 'pending' : msg.failed ? 'failed' : '';
+
+    // Handle different message types
+    let contentHtml = '';
+    if (msg.type === 'image') {
+      contentHtml = `<img src="${msg.content}" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:4px;" loading="lazy">`;
+    } else if (msg.type === 'video') {
+      contentHtml = `<video src="${msg.content}" controls style="max-width:200px;border-radius:8px;display:block;margin-bottom:4px;"></video>`;
+    } else if (msg.type === 'audio') {
+      contentHtml = `<audio src="${msg.content}" controls style="max-width:220px;display:block;margin-bottom:4px;"></audio>`;
+    } else if (msg.type === 'file') {
+      contentHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="material-icons-round">insert_drive_file</span><span style="font-size:13px;">${escapeHtml(msg.fileName || 'File')}</span></div>`;
+    } else {
+      contentHtml = escapeHtml(msg.content);
+    }
+
     html += `
       <div class="message-row ${isOutgoing ? 'outgoing' : 'incoming'}">
         <div class="message-bubble ${bubbleClass}">
-          ${escapeHtml(msg.content)}
-          <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+          ${contentHtml}
+          <div class="message-time">${formatMessageTime(msg.timestamp)}${msg.pending ? ' · Sending...' : msg.failed ? ' · Failed' : ''}</div>
         </div>
-      </div>
-    `;
+      </div>`;
   });
 
   tempDiv.innerHTML = html;
-  while (tempDiv.firstChild) {
-    fragment.appendChild(tempDiv.firstChild);
-  }
-
+  while (tempDiv.firstChild) fragment.appendChild(tempDiv.firstChild);
   container.innerHTML = '';
   container.appendChild(fragment);
   scrollToBottom();
 }
 
-// Get date label
 function getDateLabel(timestamp) {
   const date = new Date(timestamp);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-
   if (date.toDateString() === today.toDateString()) return 'Today';
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// Send message
-async function handleSendMessage(e) {
-  e.preventDefault();
-
+// Send text message
+async function handleSendMessage() {
   const input = document.getElementById('message-input');
   const content = input.value.trim();
-
   if (!content || !activeConversation) return;
 
   input.value = '';
+  addOptimisticMessage({ content, type: 'text' });
+}
 
+function addOptimisticMessage(msgData) {
   const tempId = 'temp_' + Date.now();
   const tempMessage = {
     id: tempId,
     conversationId: activeConversation.conversationId,
     senderId: currentUser.id,
-    content: content,
+    content: msgData.content,
+    type: msgData.type || 'text',
+    fileName: msgData.fileName,
     timestamp: new Date().toISOString(),
-    read: false,
     pending: true
   };
 
@@ -190,56 +188,41 @@ async function handleSendMessage(e) {
   messages.push(tempMessage);
   messagesCache.set(activeConversation.conversationId, messages);
   renderMessages(activeConversation.conversationId);
+  updateConversationLastMessage(activeConversation.conversationId, msgData.content || '[Attachment]');
 
-  updateConversationLastMessage(activeConversation.conversationId, content);
-
-  sendMessageAsync(activeConversation.conversationId, content, tempId);
+  sendMessageAsync(activeConversation.conversationId, msgData.content, tempId);
 }
 
-// Update conversation last message optimistically
 function updateConversationLastMessage(convId, content) {
   const conv = conversations.find(c => c.conversationId === convId);
   if (conv) {
-    conv.lastMessage = {
-      content: content,
-      timestamp: new Date().toISOString()
-    };
+    conv.lastMessage = { content, timestamp: new Date().toISOString() };
     conv.updatedAt = new Date().toISOString();
     renderConversationsList();
   }
 }
 
-// Send message async
 async function sendMessageAsync(conversationId, content, tempId) {
   try {
     const result = await sendMessage(conversationId, content);
-
+    const messages = messagesCache.get(conversationId) || [];
+    const index = messages.findIndex(m => m.id === tempId);
     if (result.success) {
-      const messages = messagesCache.get(conversationId) || [];
-      const index = messages.findIndex(m => m.id === tempId);
       if (index !== -1) {
         messages[index] = { ...result.message, pending: false };
         messagesCache.set(conversationId, messages);
-        renderMessages(conversationId);
       }
       await loadConversations();
     } else {
-      markMessageFailed(conversationId, tempId);
+      if (index !== -1) { messages[index].pending = false; messages[index].failed = true; }
       toast('Failed to send', 'error');
     }
+    renderMessages(conversationId);
   } catch (err) {
     console.error('Send error:', err);
-    markMessageFailed(conversationId, tempId);
-  }
-}
-
-function markMessageFailed(conversationId, tempId) {
-  const messages = messagesCache.get(conversationId) || [];
-  const index = messages.findIndex(m => m.id === tempId);
-  if (index !== -1) {
-    messages[index].failed = true;
-    messages[index].pending = false;
-    messagesCache.set(conversationId, messages);
+    const messages = messagesCache.get(conversationId) || [];
+    const index = messages.findIndex(m => m.id === tempId);
+    if (index !== -1) { messages[index].pending = false; messages[index].failed = true; }
     renderMessages(conversationId);
   }
 }
@@ -250,7 +233,6 @@ async function handleUserSearch(query) {
     document.getElementById('search-results').classList.add('hidden');
     return;
   }
-
   const result = await searchUsers(query);
   const container = document.getElementById('search-results');
 
@@ -267,11 +249,9 @@ async function handleUserSearch(query) {
         <div class="search-result-name">${escapeHtml(user.name)}</div>
         <div class="search-result-id">${user.id?.slice(0, 12) || '—'}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 
   container.classList.remove('hidden');
-
   container.querySelectorAll('.search-result-item').forEach(item => {
     item.addEventListener('click', async () => {
       await startConversationWithUser(item.dataset.id);
@@ -281,10 +261,8 @@ async function handleUserSearch(query) {
   });
 }
 
-// Start conversation with user
 async function startConversationWithUser(userId) {
   const result = await getOrCreateConversation(userId);
-
   if (result.success && result.conversation) {
     if (!conversations.find(c => c.conversationId === result.conversation.conversationId)) {
       conversations.unshift(result.conversation);
@@ -296,42 +274,45 @@ async function startConversationWithUser(userId) {
   }
 }
 
-// Go back to conversations list (mobile)
+// Close chat / back to conversations
 function closeChat() {
   activeConversation = null;
-  stopMessagePolling();
-
-  const chatScreen = document.getElementById('chat-screen');
-  const convsScreen = document.getElementById('conversations-screen');
-  chatScreen.classList.add('hidden');
-  convsScreen.classList.remove('hidden');
-
+  document.getElementById('chat-screen').classList.add('hidden');
+  document.getElementById('conversations-screen').classList.remove('hidden');
   renderConversationsList();
-  startMessagePolling();
 }
 
-// Scroll to bottom
 function scrollToBottom() {
   requestAnimationFrame(() => {
-    const container = document.getElementById('messages-container');
-    if (container) container.scrollTop = container.scrollHeight;
+    const c = document.getElementById('messages-container');
+    if (c) c.scrollTop = c.scrollHeight;
   });
 }
 
-// Escape HTML
 function escapeHtml(text) {
   if (!text) return '';
-  return text.replace(/[&<>"']/g, (char) => {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    return map[char];
-  });
+  return String(text).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
 }
 
-// Setup events
+// Open contact info modal for the active conversation's other user
+function openContactInfo() {
+  if (!activeConversation) return;
+  const other = activeConversation.otherUser || {};
+  document.getElementById('contact-avatar').textContent = getInitials(other.name);
+  document.getElementById('contact-name').textContent = other.name || 'Unknown';
+  document.getElementById('contact-info-name').textContent = other.name || '—';
+  document.getElementById('contact-info-id').textContent = other.id || '—';
+  document.getElementById('contact-info-email').textContent = other.email || '—';
+  openModal('contact-modal');
+}
+
+// Setup messenger events
 function setupMessengerEvents() {
   const searchInput = document.getElementById('user-search-input');
 
-  searchInput.addEventListener('input', (e) => {
+  searchInput.addEventListener('input', e => {
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => handleUserSearch(e.target.value.trim()), 250);
   });
@@ -340,50 +321,41 @@ function setupMessengerEvents() {
     handleUserSearch(searchInput.value.trim());
   });
 
-  searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleUserSearch(searchInput.value.trim());
-    }
+  searchInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') { e.preventDefault(); handleUserSearch(searchInput.value.trim()); }
   });
 
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search-section')) {
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-section') && !e.target.closest('#search-results')) {
       document.getElementById('search-results').classList.add('hidden');
     }
   });
 
-  document.getElementById('message-form').addEventListener('submit', handleSendMessage);
+  // Send button
+  document.getElementById('send-message-btn').addEventListener('click', handleSendMessage);
+  document.getElementById('message-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+  });
 
-  // FIX: was 'close-chat' which doesn't exist — correct ID is 'back-to-conversations'
+  // Back button (mobile + desktop)
   document.getElementById('back-to-conversations').addEventListener('click', closeChat);
 
-  // Wire up chat-profile-btn to open profile modal for the other user
-  document.getElementById('chat-profile-btn').addEventListener('click', () => {
-    if (activeConversation) openProfileModal();
-  });
-
-  // Wire up chat-user-info-click
-  document.getElementById('chat-user-info-click').addEventListener('click', () => {
-    if (activeConversation) openProfileModal();
-  });
+  // Info/contact button
+  document.getElementById('chat-profile-btn').addEventListener('click', openContactInfo);
+  document.getElementById('chat-user-info-click').addEventListener('click', openContactInfo);
 }
 
-// Message polling
+// Polling
 function startMessagePolling() {
   stopMessagePolling();
-
   messagePollingInterval = setInterval(async () => {
     if (!currentUser) return;
-
     await loadConversations();
-
     if (activeConversation) {
       const result = await getMessages(activeConversation.conversationId);
       if (result.success) {
         const current = messagesCache.get(activeConversation.conversationId) || [];
         const fresh = result.messages || [];
-
         const hasPending = current.some(m => m.pending);
         if (fresh.length > current.length && !hasPending) {
           messagesCache.set(activeConversation.conversationId, fresh);
@@ -395,21 +367,16 @@ function startMessagePolling() {
 }
 
 function stopMessagePolling() {
-  if (messagePollingInterval) {
-    clearInterval(messagePollingInterval);
-    messagePollingInterval = null;
-  }
+  if (messagePollingInterval) { clearInterval(messagePollingInterval); messagePollingInterval = null; }
 }
 
-// Cleanup
 window.addEventListener('beforeunload', () => {
   stopMessagePolling();
-  if (typeof qrStream !== 'undefined' && qrStream) {
-    qrStream.getTracks().forEach(t => t.stop());
-  }
+  if (typeof qrStream !== 'undefined' && qrStream) qrStream.getTracks().forEach(t => t.stop());
 });
 
 // Exports
 window.openConversation = openConversation;
 window.closeChat = closeChat;
 window.renderConversationsList = renderConversationsList;
+window.addOptimisticMessage = addOptimisticMessage;

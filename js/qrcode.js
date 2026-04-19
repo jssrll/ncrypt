@@ -1,65 +1,72 @@
 // ============================================================
-//  QR CODE FUNCTIONALITY - FIXED
+//  QR CODE - FIXED: encodes name+id+email, scanner reads it
 // ============================================================
 
 let qrScanner = null;
 let qrStream = null;
 
+// QR data format: JSON with id, name, email
+function buildQRData(user) {
+  return JSON.stringify({
+    app: 'ncrypt',
+    id: user.id,
+    name: user.name,
+    email: user.email
+  });
+}
+
+function parseQRData(raw) {
+  try {
+    const data = JSON.parse(raw.trim());
+    if (data.app === 'ncrypt' && data.id) return data;
+  } catch (_) {}
+  // Fallback: plain user ID (legacy)
+  const trimmed = raw.trim();
+  if (trimmed && !trimmed.includes(' ')) return { id: trimmed };
+  return null;
+}
+
 // Generate QR Code
 function generateUserQRCode() {
-  if (!currentUser) {
-    toast('Not logged in', 'error');
-    return;
-  }
-  
+  if (!currentUser) { toast('Not logged in', 'error'); return; }
+
   const container = document.getElementById('qr-container');
   if (!container) return;
-  
-  container.innerHTML = '<div style="padding:20px;text-align:center;">Generating...</div>';
-  
-  // Simple data format
-  const qrData = `${currentUser.id}`;
-  
+
+  container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);">Generating QR...</div>';
+
+  const qrData = buildQRData(currentUser);
+
   setTimeout(() => {
     container.innerHTML = '';
     const canvas = document.createElement('canvas');
     canvas.id = 'qr-canvas';
-    canvas.style.width = '200px';
-    canvas.style.height = '200px';
     container.appendChild(canvas);
-    
-    try {
-      QRCode.toCanvas(canvas, qrData, {
-        width: 200,
-        margin: 1,
-        color: { dark: '#1A1A1E', light: '#FFFFFF' }
-      }, (error) => {
-        if (error) {
-          console.error('QR error:', error);
-          container.innerHTML = `
-            <div style="padding:20px;text-align:center;">
-              <p style="color:var(--text-muted);margin-bottom:10px;">Your ID:</p>
-              <p style="font-family:monospace;font-size:12px;word-break:break-all;background:var(--bg-sidebar);padding:12px;border-radius:8px;">${currentUser.id}</p>
-            </div>
-          `;
-        }
-      });
-    } catch (err) {
-      console.error('QR error:', err);
-    }
+
+    QRCode.toCanvas(canvas, qrData, {
+      width: 220,
+      margin: 2,
+      color: { dark: '#1A1A1E', light: '#FFFFFF' }
+    }, err => {
+      if (err) {
+        console.error('QR error:', err);
+        container.innerHTML = `
+          <div style="padding:20px;text-align:center;">
+            <p style="color:var(--text-muted);margin-bottom:8px;font-size:13px;">Your ID:</p>
+            <p style="font-family:monospace;font-size:11px;word-break:break-all;background:var(--bg-sidebar);padding:12px;border-radius:8px;">${currentUser.id}</p>
+          </div>`;
+      }
+    });
   }, 100);
 }
 
 // Download QR
 function downloadQRCode() {
   const canvas = document.getElementById('qr-canvas');
-  if (!canvas) {
-    toast('No QR code', 'error');
-    return;
-  }
+  if (!canvas) { toast('Generate QR first', 'error'); return; }
   try {
     const link = document.createElement('a');
-    link.download = `ncrypt-${currentUser.id.slice(0,8)}.png`;
+    link.download = `ncrypt-${currentUser.name.replace(/\s+/g, '-')}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (err) {
@@ -72,7 +79,7 @@ async function startQRScanner() {
   const video = document.getElementById('qr-video');
   try {
     qrStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: 640, height: 480 }
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
     });
     video.srcObject = qrStream;
     await video.play();
@@ -83,26 +90,24 @@ async function startQRScanner() {
   }
 }
 
-// Scan
+// Scan loop
 function scanQRCode() {
   const video = document.getElementById('qr-video');
   if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
     qrScanner = requestAnimationFrame(scanQRCode);
     return;
   }
-  
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+
   const size = Math.min(video.videoWidth, video.videoHeight, 400);
-  canvas.width = size;
-  canvas.height = size;
-  
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
   const sx = (video.videoWidth - size) / 2;
   const sy = (video.videoHeight - size) / 2;
   ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-  
+
   const imageData = ctx.getImageData(0, 0, size, size);
-  
+
   if (typeof jsQR !== 'undefined') {
     const code = jsQR(imageData.data, size, size);
     if (code && code.data) {
@@ -110,24 +115,24 @@ function scanQRCode() {
       return;
     }
   }
-  
+
   qrScanner = requestAnimationFrame(scanQRCode);
 }
 
-// Handle QR Data
-async function handleQRCodeData(data) {
+// Handle scanned QR data
+async function handleQRCodeData(raw) {
   stopQRScanner();
   closeModal('scanner-modal');
   closeModal('profile-modal');
-  
-  const userId = data.trim();
-  
-  if (userId === currentUser.id) {
-    toast('This is your QR code', 'info');
-    return;
-  }
-  
-  const result = await getOrCreateConversation(userId);
+
+  const parsed = parseQRData(raw);
+  if (!parsed) { toast('Invalid QR code', 'error'); return; }
+
+  if (parsed.id === currentUser.id) { toast('That\'s your own QR code!', 'info'); return; }
+
+  toast(`Found: ${parsed.name || parsed.id}`, 'info');
+
+  const result = await getOrCreateConversation(parsed.id);
   if (result.success && result.conversation) {
     if (!conversations.find(c => c.conversationId === result.conversation.conversationId)) {
       conversations.unshift(result.conversation);
@@ -141,42 +146,32 @@ async function handleQRCodeData(data) {
 
 // Stop Scanner
 function stopQRScanner() {
-  if (qrScanner) {
-    cancelAnimationFrame(qrScanner);
-    qrScanner = null;
-  }
-  if (qrStream) {
-    qrStream.getTracks().forEach(t => t.stop());
-    qrStream = null;
-  }
+  if (qrScanner) { cancelAnimationFrame(qrScanner); qrScanner = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
 }
 
 // File Upload
 function handleQRFileUpload(file) {
   if (!file) return;
-  
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = e => {
     const img = new Image();
     img.onload = () => {
+      const size = Math.min(img.width, img.height, 600);
       const canvas = document.createElement('canvas');
-      const size = Math.min(img.width, img.height, 400);
-      canvas.width = size;
-      canvas.height = size;
-      
+      canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
       const sx = (img.width - size) / 2;
       const sy = (img.height - size) / 2;
       ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
-      
       const imageData = ctx.getImageData(0, 0, size, size);
-      
+
       if (typeof jsQR !== 'undefined') {
         const code = jsQR(imageData.data, size, size);
         if (code && code.data) {
           handleQRCodeData(code.data);
         } else {
-          toast('No QR code found', 'error');
+          toast('No QR code found in image', 'error');
         }
       }
     };

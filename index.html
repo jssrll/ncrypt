@@ -3,26 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  
   <title>ncrypt — Secure Messenger</title>
-  
-  <!-- Favicon (keep if you want) -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#D9714E">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ncrypt">
+  <meta name="description" content="Secure encrypted messaging">
+
+  <!-- Favicon & Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
-  
+
   <!-- QR Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
+
+  <!-- Offline Indicator -->
+  <div class="offline-indicator" id="offline-indicator">
+    <span class="material-icons-round" style="font-size:14px;">wifi_off</span>
+    No internet connection
+  </div>
 
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="loading-overlay">
@@ -105,6 +124,7 @@
   <!-- Messenger App Screen -->
   <div id="app-screen" class="hidden">
     <div class="messenger-container">
+
       <!-- Conversations List Screen -->
       <div id="conversations-screen" class="conversations-screen">
         <div class="messenger-sidebar">
@@ -134,7 +154,6 @@
           </div>
 
           <div id="search-results" class="search-results hidden"></div>
-
           <div class="conversations-list" id="conversations-list"></div>
         </div>
       </div>
@@ -142,7 +161,7 @@
       <!-- Chat Screen -->
       <div id="chat-screen" class="chat-screen hidden">
         <div class="chat-header">
-          <button class="btn-icon" id="back-to-conversations">
+          <button class="btn-icon" id="back-to-conversations" title="Back">
             <span class="material-icons-round">arrow_back</span>
           </button>
           <div class="chat-user-info" id="chat-user-info-click">
@@ -153,7 +172,7 @@
             </div>
           </div>
           <div class="chat-header-actions">
-            <button class="btn-icon" id="chat-profile-btn">
+            <button class="btn-icon" id="chat-profile-btn" title="Contact info">
               <span class="material-icons-round">info</span>
             </button>
           </div>
@@ -162,27 +181,70 @@
         <div class="messages-container" id="messages-container"></div>
 
         <div class="message-input-container">
-          <form id="message-form" class="message-form">
+          <div class="message-form" id="message-form-wrapper">
             <button type="button" class="btn-attach" id="attach-btn" title="Attach">
               <span class="material-icons-round">add</span>
             </button>
             <input type="text" id="message-input" class="message-input" placeholder="Type a message..." autocomplete="off">
-            <button type="submit" class="btn-send" id="send-message-btn">
+            <button type="button" class="btn-send" id="send-message-btn">
               <span class="material-icons-round">send</span>
             </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Profile Modal -->
+  <!-- Attach Menu Popup -->
+  <div id="attach-menu" class="attach-menu hidden">
+    <div class="attach-menu-overlay" id="attach-menu-overlay"></div>
+    <div class="attach-menu-popup">
+      <button class="attach-option" id="attach-voice">
+        <div class="attach-option-icon" style="background:#7C3AED;">
+          <span class="material-icons-round">mic</span>
+        </div>
+        <span>Voice Message</span>
+      </button>
+      <button class="attach-option" id="attach-file">
+        <div class="attach-option-icon" style="background:#2563EB;">
+          <span class="material-icons-round">insert_drive_file</span>
+        </div>
+        <span>Send File</span>
+      </button>
+      <button class="attach-option" id="attach-image">
+        <div class="attach-option-icon" style="background:#16A34A;">
+          <span class="material-icons-round">image</span>
+        </div>
+        <span>Send Image</span>
+      </button>
+      <button class="attach-option" id="attach-video">
+        <div class="attach-option-icon" style="background:#DC2626;">
+          <span class="material-icons-round">videocam</span>
+        </div>
+        <span>Send Video</span>
+      </button>
+      <button class="attach-option" id="attach-capture">
+        <div class="attach-option-icon" style="background:#D9714E;">
+          <span class="material-icons-round">camera_alt</span>
+        </div>
+        <span>Camera</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden file inputs -->
+  <input type="file" id="file-input-file" accept="*/*" style="display:none;">
+  <input type="file" id="file-input-image" accept="image/*" style="display:none;">
+  <input type="file" id="file-input-video" accept="video/*" style="display:none;">
+  <input type="file" id="file-input-capture" accept="image/*,video/*" capture="environment" style="display:none;">
+
+  <!-- Profile Modal (own profile) -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Profile</h2>
-        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+        <h2>My Profile</h2>
+        <button class="btn-icon modal-close" data-modal="profile-modal"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <div class="profile-header">
@@ -204,8 +266,49 @@
           </button>
           <button class="profile-action-btn" id="upload-qr-btn">
             <span class="material-icons-round">upload</span>
-            <span>Upload</span>
+            <span>Upload QR</span>
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Info Modal (other user's profile) -->
+  <div id="contact-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Contact Info</h2>
+        <button class="btn-icon modal-close" data-modal="contact-modal"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="contact-profile-hero">
+          <div class="contact-avatar-large" id="contact-avatar">—</div>
+          <h3 id="contact-name">—</h3>
+          <p id="contact-status-label" style="color:var(--accent);font-size:13px;margin-top:4px;">● Online</p>
+        </div>
+        <div class="contact-info-rows">
+          <div class="contact-info-row">
+            <span class="material-icons-round">badge</span>
+            <div>
+              <p class="contact-info-label">Full Name</p>
+              <p class="contact-info-value" id="contact-info-name">—</p>
+            </div>
+          </div>
+          <div class="contact-info-row">
+            <span class="material-icons-round">fingerprint</span>
+            <div>
+              <p class="contact-info-label">User ID</p>
+              <p class="contact-info-value monospace" id="contact-info-id">—</p>
+            </div>
+          </div>
+          <div class="contact-info-row">
+            <span class="material-icons-round">email</span>
+            <div>
+              <p class="contact-info-label">Email</p>
+              <p class="contact-info-value" id="contact-info-email">—</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -217,7 +320,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>Settings</h2>
-        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+        <button class="btn-icon modal-close" data-modal="settings-modal"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <div class="settings-section">
@@ -226,7 +329,7 @@
             <span>Logout</span>
           </button>
         </div>
-        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 16px;">ncrypt v1.0.0</p>
+        <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:16px;">ncrypt v1.0.0</p>
       </div>
     </div>
   </div>
@@ -237,11 +340,11 @@
     <div class="modal-container qr-modal">
       <div class="modal-header">
         <h2>My QR Code</h2>
-        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+        <button class="btn-icon modal-close" data-modal="qr-modal"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body qr-body">
         <div class="qr-container" id="qr-container"></div>
-        <p class="qr-info">Scan to chat with me</p>
+        <p class="qr-info">Scan to add me on ncrypt</p>
         <button class="btn-primary" id="download-qr-btn">
           <span class="material-icons-round">download</span>
           Download
@@ -256,11 +359,11 @@
     <div class="modal-container scanner-modal">
       <div class="modal-header">
         <h2>Scan QR Code</h2>
-        <button class="btn-icon modal-close"><span class="material-icons-round">close</span></button>
+        <button class="btn-icon modal-close" data-modal="scanner-modal"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body scanner-body">
         <div class="scanner-container">
-          <video id="qr-video" autoplay playsinline></video>
+          <video id="qr-video" autoplay playsinline muted></video>
           <div class="scanner-overlay"><div class="scanner-frame"></div></div>
         </div>
         <p class="scanner-info">Position QR code within frame</p>
@@ -271,7 +374,35 @@
     </div>
   </div>
 
-  <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+  <!-- Voice Recorder Modal -->
+  <div id="voice-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-container" style="max-width:340px;">
+      <div class="modal-header">
+        <h2>Voice Message</h2>
+        <button class="btn-icon modal-close" data-modal="voice-modal"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div class="voice-recorder">
+          <div class="voice-indicator" id="voice-indicator">
+            <span class="material-icons-round" style="font-size:48px;color:var(--accent);">mic</span>
+          </div>
+          <p id="voice-timer" style="font-size:28px;font-weight:700;margin:16px 0;font-family:var(--font-display);">0:00</p>
+          <p id="voice-status" style="color:var(--text-muted);font-size:13px;margin-bottom:24px;">Tap record to start</p>
+          <div style="display:flex;gap:12px;">
+            <button class="btn-secondary" id="voice-record-btn" style="flex:1;">
+              <span class="material-icons-round">mic</span> Record
+            </button>
+            <button class="btn-primary" id="voice-send-btn" style="flex:1;" disabled>
+              <span class="material-icons-round">send</span> Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="qr-file-input" accept="image/*" style="display:none;">
 
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
@@ -286,5 +417,40 @@
   <script src="js/profile.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/attach.js"></script>
+
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('[SW] Registered:', reg.scope);
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateBanner();
+              }
+            });
+          });
+        }).catch(err => console.log('[SW] Error:', err));
+      });
+    }
+
+    function showUpdateBanner() {
+      const banner = document.createElement('div');
+      banner.className = 'update-notification';
+      banner.innerHTML = `<span>Update available!</span><button onclick="window.location.reload()">Refresh</button>`;
+      document.body.appendChild(banner);
+    }
+
+    // Online/offline detection
+    function updateOnlineStatus() {
+      document.body.classList.toggle('offline', !navigator.onLine);
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+  </script>
 </body>
 </html>

@@ -1,13 +1,18 @@
 // ============================================================
-//  SETTINGS - SIMPLIFIED
+//  SETTINGS - FIXED
 // ============================================================
 
 function initSettings() {
-  document.getElementById('sidebar-settings').addEventListener('click', openSettingsModal);
-  document.getElementById('settings-logout-btn').addEventListener('click', () => {
-    closeModal('settings-modal');
-    logout();
-  });
+  const settingsBtn = document.getElementById('sidebar-settings');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+
+  const logoutBtn = document.getElementById('settings-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      closeModal('settings-modal');
+      setTimeout(logout, 200);
+    });
+  }
 }
 
 function openSettingsModal() {

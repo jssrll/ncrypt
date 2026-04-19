@@ -1,38 +1,58 @@
 // ============================================================
-//  PROFILE FUNCTIONALITY
+//  PROFILE FUNCTIONALITY - FIXED
 // ============================================================
 
 function initProfile() {
-  document.getElementById('sidebar-profile').addEventListener('click', openProfileModal);
-  document.getElementById('show-qr-btn').addEventListener('click', showQRCode);
-  document.getElementById('scan-qr-btn').addEventListener('click', startQRScannerFlow);
-  document.getElementById('upload-qr-btn').addEventListener('click', triggerQRUpload);
-  document.getElementById('download-qr-btn').addEventListener('click', downloadQRCode);
-  
-  document.getElementById('qr-file-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleQRFileUpload(file);
-    e.target.value = '';
-  });
-  
-  document.getElementById('stop-scanner-btn').addEventListener('click', () => {
-    stopQRScanner();
-    closeModal('scanner-modal');
-  });
+  // Own profile button
+  const profileBtn = document.getElementById('sidebar-profile');
+  if (profileBtn) profileBtn.addEventListener('click', openProfileModal);
+
+  // QR buttons
+  const showQr = document.getElementById('show-qr-btn');
+  if (showQr) showQr.addEventListener('click', showQRCode);
+
+  const scanQr = document.getElementById('scan-qr-btn');
+  if (scanQr) scanQr.addEventListener('click', startQRScannerFlow);
+
+  const uploadQr = document.getElementById('upload-qr-btn');
+  if (uploadQr) uploadQr.addEventListener('click', triggerQRUpload);
+
+  const downloadQr = document.getElementById('download-qr-btn');
+  if (downloadQr) downloadQr.addEventListener('click', downloadQRCode);
+
+  // QR file input
+  const qrFileInput = document.getElementById('qr-file-input');
+  if (qrFileInput) {
+    qrFileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleQRFileUpload(file);
+      e.target.value = '';
+    });
+  }
+
+  // Scanner stop
+  const stopBtn = document.getElementById('stop-scanner-btn');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', () => {
+      stopQRScanner();
+      closeModal('scanner-modal');
+    });
+  }
 }
 
 function openProfileModal() {
+  if (!currentUser) return;
   document.getElementById('profile-avatar').textContent = getInitials(currentUser.name);
-  document.getElementById('profile-name').textContent = currentUser.name;
-  document.getElementById('profile-email').textContent = currentUser.email;
-  document.getElementById('profile-id').textContent = currentUser.id?.slice(0, 16) || '—';
+  document.getElementById('profile-name').textContent = currentUser.name || '—';
+  document.getElementById('profile-email').textContent = currentUser.email || '—';
+  document.getElementById('profile-id').textContent = currentUser.id || '—';
   openModal('profile-modal');
 }
 
 function showQRCode() {
   closeModal('profile-modal');
   openModal('qr-modal');
-  setTimeout(generateUserQRCode, 100);
+  setTimeout(generateUserQRCode, 150);
 }
 
 function startQRScannerFlow() {
