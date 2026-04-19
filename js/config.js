@@ -2,8 +2,8 @@
 //  CONFIGURATION & STATE
 // ============================================================
 
-// Backend URL - HARDCODED (replace with your actual Apps Script URL)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0jn7hZDqjWb52D-yoHDBSKi26o3kC-7GV8Mrc6t3uIIEIG63ZhvDzZ_xVSm3v30H0/exec';
+// Backend URL
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLI8TqnaDJ5GVcHg344K2NJvChDYrUErK0STEqcxG3bJLaa7TdwpA0DE02ipfZz_Yu/exec';
 
 // Current authenticated user
 let currentUser = null;
