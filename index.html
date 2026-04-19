@@ -13,11 +13,11 @@
   <meta name="apple-mobile-web-app-title" content="ncrypt">
   <meta name="description" content="Secure encrypted messaging">
 
-  <!-- Favicon & Icons -->
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+  <!-- Favicon & Icons - Temporarily commented out -->
+  <!-- <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png"> -->
+  <!-- <link rel="apple-touch-icon" href="icons/icon-192.png"> -->
+  <!-- <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png"> -->
+  <!-- <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png"> -->
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
@@ -30,10 +30,6 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
-
-  <!-- QR Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
 
@@ -249,19 +245,14 @@
           </div>
         </div>
         <div class="profile-actions">
-          <button class="profile-action-btn" id="show-qr-btn">
-            <span class="material-icons-round">qr_code</span>
-            <span>My QR</span>
-          </button>
-          <button class="profile-action-btn" id="scan-qr-btn">
-            <span class="material-icons-round">qr_code_scanner</span>
-            <span>Scan</span>
-          </button>
-          <button class="profile-action-btn" id="upload-qr-btn">
-            <span class="material-icons-round">upload</span>
-            <span>Upload QR</span>
+          <button class="profile-action-btn" id="copy-id-btn" style="grid-column: span 1; width: 100%;">
+            <span class="material-icons-round">content_copy</span>
+            <span>Copy My ID</span>
           </button>
         </div>
+        <p style="text-align:center; color:var(--text-muted); font-size:12px; margin-top:16px;">
+          Share your ID with others to connect
+        </p>
       </div>
     </div>
   </div>
@@ -327,46 +318,6 @@
     </div>
   </div>
 
-  <!-- QR Code Modal -->
-  <div id="qr-modal" class="modal hidden">
-    <div class="modal-overlay"></div>
-    <div class="modal-container qr-modal">
-      <div class="modal-header">
-        <h2>My QR Code</h2>
-        <button class="btn-icon modal-close" data-modal="qr-modal"><span class="material-icons-round">close</span></button>
-      </div>
-      <div class="modal-body qr-body">
-        <div class="qr-container" id="qr-container"></div>
-        <p class="qr-info">Scan to add me on ncrypt</p>
-        <button class="btn-primary" id="download-qr-btn">
-          <span class="material-icons-round">download</span>
-          Download
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- QR Scanner Modal -->
-  <div id="scanner-modal" class="modal hidden">
-    <div class="modal-overlay"></div>
-    <div class="modal-container scanner-modal">
-      <div class="modal-header">
-        <h2>Scan QR Code</h2>
-        <button class="btn-icon modal-close" data-modal="scanner-modal"><span class="material-icons-round">close</span></button>
-      </div>
-      <div class="modal-body scanner-body">
-        <div class="scanner-container">
-          <video id="qr-video" autoplay playsinline muted></video>
-          <div class="scanner-overlay"><div class="scanner-frame"></div></div>
-        </div>
-        <p class="scanner-info">Position QR code within frame</p>
-        <div class="scanner-actions">
-          <button class="btn-secondary" id="stop-scanner-btn">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Voice Recorder Modal -->
   <div id="voice-modal" class="modal hidden">
     <div class="modal-overlay"></div>
@@ -395,8 +346,6 @@
     </div>
   </div>
 
-  <input type="file" id="qr-file-input" accept="image/*" style="display:none;">
-
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -406,7 +355,6 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/messaging.js"></script>
-  <script src="js/qrcode.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/ui.js"></script>

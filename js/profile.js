@@ -1,5 +1,5 @@
 // ============================================================
-//  PROFILE FUNCTIONALITY - FIXED
+//  PROFILE FUNCTIONALITY - SIMPLIFIED (No QR)
 // ============================================================
 
 function initProfile() {
@@ -7,47 +7,10 @@ function initProfile() {
   const profileBtn = document.getElementById('sidebar-profile');
   if (profileBtn) profileBtn.addEventListener('click', openProfileModal);
 
-  // QR buttons
-  const showQr = document.getElementById('show-qr-btn');
-  if (showQr) showQr.addEventListener('click', () => {
-    closeModal('profile-modal');
-    openModal('qr-modal');
-    setTimeout(generateUserQRCode, 150);
-  });
-
-  const scanQr = document.getElementById('scan-qr-btn');
-  if (scanQr) scanQr.addEventListener('click', () => {
-    closeModal('profile-modal');
-    openModal('scanner-modal');
-    startQRScanner();
-  });
-
-  const uploadQr = document.getElementById('upload-qr-btn');
-  if (uploadQr) uploadQr.addEventListener('click', () => {
-    closeModal('profile-modal');
-    document.getElementById('qr-file-input').click();
-  });
-
-  const downloadQr = document.getElementById('download-qr-btn');
-  if (downloadQr) downloadQr.addEventListener('click', downloadQRCode);
-
-  // QR file input
-  const qrFileInput = document.getElementById('qr-file-input');
-  if (qrFileInput) {
-    qrFileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) handleQRFileUpload(file);
-      e.target.value = '';
-    });
-  }
-
-  // Scanner stop button
-  const stopBtn = document.getElementById('stop-scanner-btn');
-  if (stopBtn) {
-    stopBtn.addEventListener('click', () => {
-      stopQRScanner();
-      closeModal('scanner-modal');
-    });
+  // Copy ID button
+  const copyIdBtn = document.getElementById('copy-id-btn');
+  if (copyIdBtn) {
+    copyIdBtn.addEventListener('click', copyUserId);
   }
 }
 
@@ -58,4 +21,24 @@ function openProfileModal() {
   document.getElementById('profile-email').textContent = currentUser.email || '—';
   document.getElementById('profile-id').textContent = currentUser.id || '—';
   openModal('profile-modal');
+}
+
+function copyUserId() {
+  if (!currentUser || !currentUser.id) {
+    toast('No user ID found', 'error');
+    return;
+  }
+  
+  navigator.clipboard.writeText(currentUser.id).then(() => {
+    toast('User ID copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = currentUser.id;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    toast('User ID copied!', 'success');
+  });
 }

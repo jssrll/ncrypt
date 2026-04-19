@@ -1,0 +1,12 @@
+{
+  "name": "ncrypt — Secure Messenger",
+  "short_name": "ncrypt",
+  "description": "Secure encrypted messaging",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#D9714E",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["social", "communication"]
+}

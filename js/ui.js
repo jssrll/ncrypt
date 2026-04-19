@@ -1,5 +1,5 @@
 // ============================================================
-//  UI MANAGEMENT - FIXED
+//  UI MANAGEMENT
 // ============================================================
 
 // ── Modal system ──────────────────────────────────────────────
@@ -26,8 +26,6 @@ function initModals() {
       // Close parent modal
       const modal = btn.closest('.modal');
       if (modal) {
-        // Stop QR scanner if closing scanner modal
-        if (modal.id === 'scanner-modal') stopQRScanner();
         closeModal(modal.id);
       }
     });
@@ -38,7 +36,6 @@ function initModals() {
     overlay.addEventListener('click', () => {
       const modal = overlay.closest('.modal');
       if (modal) {
-        if (modal.id === 'scanner-modal') stopQRScanner();
         closeModal(modal.id);
       }
     });

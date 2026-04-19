@@ -210,7 +210,6 @@ function renderMessages(conversationId) {
     let contentHtml = '';
 
     if (msgType === 'image') {
-      // lh3.googleusercontent.com/d/FILE_ID renders in <img> without CORS issues
       contentHtml = `
         <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener">
           <img
@@ -222,8 +221,6 @@ function renderMessages(conversationId) {
           >
         </a>`;
     } else if (msgType === 'video') {
-      // Drive uc?export=download works as a <video> src for small files.
-      // Large files fall back to an "Open in Drive" link via the error handler.
       const fileId = getDriveFileIdFromMsg(driveUrl);
       const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
       contentHtml = `
@@ -243,7 +240,6 @@ function renderMessages(conversationId) {
           </a>
         </div>`;
     } else if (msgType === 'audio') {
-      // Drive download URL works as <audio> src for webm/mp3 under ~20MB
       contentHtml = `
         <div style="margin-bottom:4px;">
           <audio
@@ -275,7 +271,7 @@ function renderMessages(conversationId) {
           </div>
         </div>`;
     } else {
-      // Plain text — skip if it looks like raw JSON (malformed file message)
+      // Plain text
       const displayContent = (msg.content && msg.content[0] === '{')
         ? '📎 Attachment'
         : escapeHtml(msg.content).replace(/\n/g, '<br>');
@@ -554,7 +550,6 @@ function stopMessagePolling() {
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   stopMessagePolling();
-  if (typeof qrStream !== 'undefined' && qrStream) qrStream.getTracks().forEach(t => t.stop());
 });
 
 // Exports for global access

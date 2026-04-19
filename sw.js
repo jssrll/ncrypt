@@ -13,14 +13,22 @@ const STATIC_ASSETS = [
   '/js/profile.js',
   '/js/settings.js',
   '/js/ui.js',
-  '/manifest.json'
+  '/js/attach.js'
+  // Removed manifest.json and icons until they exist
 ];
 
 // Install: cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      // Use addAll but catch errors for missing files
+      return Promise.allSettled(
+        STATIC_ASSETS.map(url => 
+          cache.add(url).catch(err => {
+            console.warn(`Failed to cache ${url}:`, err);
+          })
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
@@ -58,7 +66,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {
-        if (response.ok && event.request.method === 'GET') {
+        if (response && response.ok && event.request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
