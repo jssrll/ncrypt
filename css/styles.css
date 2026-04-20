@@ -1221,3 +1221,10 @@ body {
 .settings-item.clickable:active {
   background: var(--border);
 }
+
+.loading-logo img,
+.auth-logo-icon img,
+.install-icon img {
+  display: block;
+  filter: brightness(0) invert(1); /* Makes the PNG white if it's dark */
+}
