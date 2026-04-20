@@ -8,8 +8,17 @@ const PREF_HIGH_CONTRAST = 'ncrypt_high_contrast';
 const PREF_FONT_SIZE = 'ncrypt_font_size';
 const PREF_DATA_SAVER = 'ncrypt_data_saver';
 
-// Initialize settings
+// Initialize settings (called from messaging.js)
 function initSettings() {
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupSettings);
+  } else {
+    setupSettings();
+  }
+}
+
+function setupSettings() {
   const settingsBtn = document.getElementById('sidebar-settings');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
 
@@ -60,9 +69,7 @@ function initSettings() {
   // Report a problem
   const reportBtn = document.getElementById('report-problem-btn');
   if (reportBtn) {
-    reportBtn.addEventListener('click', () => {
-      reportProblem();
-    });
+    reportBtn.addEventListener('click', reportProblem);
   }
 
   // Apply saved preferences on startup
@@ -94,6 +101,7 @@ function getDarkMode() {
 function setDarkMode(enabled) {
   localStorage.setItem(PREF_DARK_MODE, enabled);
   applyDarkMode(enabled);
+  toast(enabled ? 'Dark mode enabled' : 'Light mode enabled', 'info');
 }
 
 function getHighContrast() {
@@ -103,6 +111,7 @@ function getHighContrast() {
 function setHighContrast(enabled) {
   localStorage.setItem(PREF_HIGH_CONTRAST, enabled);
   applyHighContrast(enabled);
+  toast(enabled ? 'High contrast enabled' : 'High contrast disabled', 'info');
 }
 
 function getFontSize() {
@@ -112,6 +121,7 @@ function getFontSize() {
 function setFontSize(size) {
   localStorage.setItem(PREF_FONT_SIZE, size);
   applyFontSize(size);
+  toast(`Font size: ${size}`, 'info');
 }
 
 function getDataSaver() {
@@ -121,38 +131,42 @@ function getDataSaver() {
 function setDataSaver(enabled) {
   localStorage.setItem(PREF_DATA_SAVER, enabled);
   applyDataSaver(enabled);
+  window.dataSaverEnabled = enabled;
+  toast(enabled ? 'Data saver enabled' : 'Data saver disabled', 'info');
 }
 
 // ── Apply preferences to DOM ──────────────────────────────────
 function applyDarkMode(enabled) {
+  const html = document.documentElement;
   if (enabled) {
-    document.documentElement.classList.add('dark-mode');
+    html.classList.add('dark-mode');
   } else {
-    document.documentElement.classList.remove('dark-mode');
+    html.classList.remove('dark-mode');
   }
 }
 
 function applyHighContrast(enabled) {
+  const html = document.documentElement;
   if (enabled) {
-    document.documentElement.classList.add('high-contrast');
+    html.classList.add('high-contrast');
   } else {
-    document.documentElement.classList.remove('high-contrast');
+    html.classList.remove('high-contrast');
   }
 }
 
 function applyFontSize(size) {
-  document.documentElement.classList.remove('font-small', 'font-medium', 'font-large');
-  document.documentElement.classList.add(`font-${size}`);
+  const html = document.documentElement;
+  html.classList.remove('font-small', 'font-medium', 'font-large');
+  html.classList.add(`font-${size}`);
 }
 
 function applyDataSaver(enabled) {
+  const html = document.documentElement;
   if (enabled) {
-    document.documentElement.classList.add('data-saver');
+    html.classList.add('data-saver');
   } else {
-    document.documentElement.classList.remove('data-saver');
+    html.classList.remove('data-saver');
   }
-  // You can also set a global flag for messaging.js to use lower quality
-  window.dataSaverEnabled = enabled;
 }
 
 function applyAllPreferences() {
@@ -173,12 +187,12 @@ function reportProblem() {
     `User Agent: ${navigator.userAgent}`
   );
   
-  // Replace with your support email or feedback URL
-  const supportEmail = 'support@ncrypt.app'; // Change this!
+  // Replace with your support email
+  const supportEmail = 'support@ncrypt.app';
   window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
   
   toast('Opening email client...', 'info');
 }
 
-// Expose for potential use in messaging.js
+// Expose for global access
 window.isDataSaverEnabled = getDataSaver;
