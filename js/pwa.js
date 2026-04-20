@@ -1,5 +1,5 @@
 // ============================================================
-//  PWA AGGRESSIVE INSTALL PROMPT
+//  PWA AGGRESSIVE INSTALL PROMPT – NO ESCAPE
 // ============================================================
 
 let deferredPrompt = null;
@@ -8,48 +8,31 @@ const installBtn = document.getElementById('install-btn');
 const installClose = document.getElementById('install-close');
 const installText = document.querySelector('.install-text p');
 
-let bannerDismissed = false;
-const DISMISS_KEY = 'ncrypt_install_dismissed';
-const DISMISS_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+// We do NOT use localStorage – the banner always comes back
 
 function isAppInstalled() {
   return window.matchMedia('(display-mode: standalone)').matches ||
          window.navigator.standalone === true;
 }
 
-function isBannerDismissed() {
-  const dismissed = localStorage.getItem(DISMISS_KEY);
-  if (!dismissed) return false;
-  const timestamp = parseInt(dismissed, 10);
-  return (Date.now() - timestamp) < DISMISS_EXPIRY;
-}
-
-function setBannerDismissed() {
-  localStorage.setItem(DISMISS_KEY, Date.now().toString());
-  bannerDismissed = true;
-}
-
-function showInstallBanner(message = null) {
+function showInstallBanner() {
   if (!installBanner) return;
-  if (isAppInstalled()) return;
-  if (bannerDismissed || isBannerDismissed()) return;
+  if (isAppInstalled()) return; // already installed – stop forever
   
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (installText) {
-    installText.textContent = message || (isIOS 
-      ? 'Tap Share → "Add to Home Screen" to install' 
-      : 'Add to Home Screen for the best experience');
+    installText.textContent = isIOS
+      ? 'Tap Share → "Add to Home Screen" to install'
+      : 'Add to Home Screen for the best experience';
   }
   
   installBanner.classList.remove('hidden');
 }
 
-function hideInstallBanner(remember = true) {
+function hideInstallBanner() {
   if (!installBanner) return;
   installBanner.classList.add('hidden');
-  if (remember) {
-    setBannerDismissed();
-  }
+  // NO permanent dismissal – it will come back on next interaction
 }
 
 async function handleInstallClick() {
@@ -57,13 +40,13 @@ async function handleInstallClick() {
   
   if (isIOS) {
     toast('📱 Tap the Share button, then "Add to Home Screen"', 'info', 6000);
-    hideInstallBanner(true);
+    hideInstallBanner();
     return;
   }
   
   if (!deferredPrompt) {
     toast('Tap the menu (⋮) → "Install app" or "Add to Home Screen"', 'info', 5000);
-    hideInstallBanner(true);
+    hideInstallBanner();
     return;
   }
   
@@ -76,38 +59,60 @@ async function handleInstallClick() {
   } else {
     toast('Maybe later!', 'info');
   }
-  hideInstallBanner(false);
+  hideInstallBanner();
 }
 
+// ── Persistent re‑show on ANY user interaction ────────────────
+function aggressiveShow() {
+  if (isAppInstalled()) return;
+  showInstallBanner();
+}
+
+// Throttle to avoid spamming during rapid clicks
+let pendingShow = false;
+function scheduleAggressiveShow() {
+  if (pendingShow) return;
+  pendingShow = true;
+  requestAnimationFrame(() => {
+    aggressiveShow();
+    pendingShow = false;
+  });
+}
+
+// Attach listeners to all meaningful user interactions
+const interactionEvents = ['click', 'touchstart', 'keydown', 'scroll'];
+interactionEvents.forEach(evt => {
+  document.addEventListener(evt, scheduleAggressiveShow, { passive: true });
+});
+
+// Also show after any navigation (including back/forward)
+window.addEventListener('pageshow', scheduleAggressiveShow);
+
+// ── Standard PWA install events ───────────────────────────────
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (!isAppInstalled()) {
-    showInstallBanner();
-  }
+  showInstallBanner();
 });
 
 if (installBtn) installBtn.addEventListener('click', handleInstallClick);
-if (installClose) installClose.addEventListener('click', () => hideInstallBanner(true));
 
-window.addEventListener('appinstalled', () => {
-  hideInstallBanner(false);
-  deferredPrompt = null;
-  toast('✅ ncrypt installed!', 'success');
-});
-
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    if (!isAppInstalled() && !deferredPrompt) {
-      showInstallBanner();
-    }
-  }, 3000);
-});
-
-function triggerInstallFromSettings() {
-  bannerDismissed = false;
-  showInstallBanner();
-  toast('Tap "Install" to add ncrypt to your home screen', 'info');
+// Close button only hides temporarily – next interaction brings it back
+if (installClose) {
+  installClose.addEventListener('click', () => {
+    hideInstallBanner();
+  });
 }
 
-window.triggerInstallFromSettings = triggerInstallFromSettings;
+// Once installed, stop showing forever
+window.addEventListener('appinstalled', () => {
+  hideInstallBanner();
+  deferredPrompt = null;
+  toast('✅ ncrypt installed!', 'success');
+  // Remove all aggressive listeners? Not necessary – isAppInstalled() will block showing
+});
+
+// Initial show after load
+window.addEventListener('load', () => {
+  setTimeout(showInstallBanner, 1000);
+});
