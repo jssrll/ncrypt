@@ -1210,3 +1210,14 @@ html.font-large { --font-body-size: 17px; }
 body {
   font-size: var(--font-body-size, 15px);
 }
+
+.settings-item.clickable {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.settings-item.clickable:hover {
+  background: var(--border-light);
+}
+.settings-item.clickable:active {
+  background: var(--border);
+}
