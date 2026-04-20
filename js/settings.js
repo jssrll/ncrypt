@@ -2,15 +2,15 @@
 //  SETTINGS – DARK MODE, FONT SIZE, DATA SAVER, HIGH CONTRAST
 // ============================================================
 
-// Preference keys
 const PREF_DARK_MODE = 'ncrypt_dark_mode';
 const PREF_HIGH_CONTRAST = 'ncrypt_high_contrast';
 const PREF_FONT_SIZE = 'ncrypt_font_size';
 const PREF_DATA_SAVER = 'ncrypt_data_saver';
 
-// Initialize settings (called from messaging.js)
 function initSettings() {
-  // Wait for DOM to be ready
+  console.log('[Settings] Initializing...');
+  
+  // Wait for DOM
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupSettings);
   } else {
@@ -19,8 +19,14 @@ function initSettings() {
 }
 
 function setupSettings() {
+  console.log('[Settings] Setting up event listeners...');
+  
   const settingsBtn = document.getElementById('sidebar-settings');
-  if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', openSettingsModal);
+  } else {
+    console.warn('[Settings] #sidebar-settings not found');
+  }
 
   const logoutBtn = document.getElementById('settings-logout-btn');
   if (logoutBtn) {
@@ -34,36 +40,31 @@ function setupSettings() {
   const darkModeToggle = document.getElementById('dark-mode-toggle');
   if (darkModeToggle) {
     darkModeToggle.checked = getDarkMode();
-    darkModeToggle.addEventListener('change', (e) => {
-      setDarkMode(e.target.checked);
-    });
+    darkModeToggle.addEventListener('change', (e) => setDarkMode(e.target.checked));
+    console.log('[Settings] Dark mode toggle ready');
+  } else {
+    console.warn('[Settings] #dark-mode-toggle not found');
   }
 
   // High contrast toggle
   const highContrastToggle = document.getElementById('high-contrast-toggle');
   if (highContrastToggle) {
     highContrastToggle.checked = getHighContrast();
-    highContrastToggle.addEventListener('change', (e) => {
-      setHighContrast(e.target.checked);
-    });
+    highContrastToggle.addEventListener('change', (e) => setHighContrast(e.target.checked));
   }
 
   // Font size select
   const fontSizeSelect = document.getElementById('font-size-select');
   if (fontSizeSelect) {
     fontSizeSelect.value = getFontSize();
-    fontSizeSelect.addEventListener('change', (e) => {
-      setFontSize(e.target.value);
-    });
+    fontSizeSelect.addEventListener('change', (e) => setFontSize(e.target.value));
   }
 
   // Data saver toggle
   const dataSaverToggle = document.getElementById('data-saver-toggle');
   if (dataSaverToggle) {
     dataSaverToggle.checked = getDataSaver();
-    dataSaverToggle.addEventListener('change', (e) => {
-      setDataSaver(e.target.checked);
-    });
+    dataSaverToggle.addEventListener('change', (e) => setDataSaver(e.target.checked));
   }
 
   // Report a problem
@@ -72,12 +73,13 @@ function setupSettings() {
     reportBtn.addEventListener('click', reportProblem);
   }
 
-  // Apply saved preferences on startup
+  // Apply saved preferences
   applyAllPreferences();
+  console.log('[Settings] Initialization complete');
 }
 
 function openSettingsModal() {
-  // Sync toggles with current preferences before opening
+  // Sync toggles before opening
   const darkToggle = document.getElementById('dark-mode-toggle');
   if (darkToggle) darkToggle.checked = getDarkMode();
   
@@ -93,41 +95,29 @@ function openSettingsModal() {
   openModal('settings-modal');
 }
 
-// ── Getters / Setters ─────────────────────────────────────────
-function getDarkMode() {
-  return localStorage.getItem(PREF_DARK_MODE) === 'true';
-}
-
+// Getters / Setters
+function getDarkMode() { return localStorage.getItem(PREF_DARK_MODE) === 'true'; }
 function setDarkMode(enabled) {
   localStorage.setItem(PREF_DARK_MODE, enabled);
   applyDarkMode(enabled);
   toast(enabled ? 'Dark mode enabled' : 'Light mode enabled', 'info');
 }
 
-function getHighContrast() {
-  return localStorage.getItem(PREF_HIGH_CONTRAST) === 'true';
-}
-
+function getHighContrast() { return localStorage.getItem(PREF_HIGH_CONTRAST) === 'true'; }
 function setHighContrast(enabled) {
   localStorage.setItem(PREF_HIGH_CONTRAST, enabled);
   applyHighContrast(enabled);
   toast(enabled ? 'High contrast enabled' : 'High contrast disabled', 'info');
 }
 
-function getFontSize() {
-  return localStorage.getItem(PREF_FONT_SIZE) || 'medium';
-}
-
+function getFontSize() { return localStorage.getItem(PREF_FONT_SIZE) || 'medium'; }
 function setFontSize(size) {
   localStorage.setItem(PREF_FONT_SIZE, size);
   applyFontSize(size);
   toast(`Font size: ${size}`, 'info');
 }
 
-function getDataSaver() {
-  return localStorage.getItem(PREF_DATA_SAVER) === 'true';
-}
-
+function getDataSaver() { return localStorage.getItem(PREF_DATA_SAVER) === 'true'; }
 function setDataSaver(enabled) {
   localStorage.setItem(PREF_DATA_SAVER, enabled);
   applyDataSaver(enabled);
@@ -135,40 +125,21 @@ function setDataSaver(enabled) {
   toast(enabled ? 'Data saver enabled' : 'Data saver disabled', 'info');
 }
 
-// ── Apply preferences to DOM ──────────────────────────────────
+// Apply functions
 function applyDarkMode(enabled) {
-  const html = document.documentElement;
-  if (enabled) {
-    html.classList.add('dark-mode');
-  } else {
-    html.classList.remove('dark-mode');
-  }
+  document.documentElement.classList.toggle('dark-mode', enabled);
 }
-
 function applyHighContrast(enabled) {
-  const html = document.documentElement;
-  if (enabled) {
-    html.classList.add('high-contrast');
-  } else {
-    html.classList.remove('high-contrast');
-  }
+  document.documentElement.classList.toggle('high-contrast', enabled);
 }
-
 function applyFontSize(size) {
   const html = document.documentElement;
   html.classList.remove('font-small', 'font-medium', 'font-large');
   html.classList.add(`font-${size}`);
 }
-
 function applyDataSaver(enabled) {
-  const html = document.documentElement;
-  if (enabled) {
-    html.classList.add('data-saver');
-  } else {
-    html.classList.remove('data-saver');
-  }
+  document.documentElement.classList.toggle('data-saver', enabled);
 }
-
 function applyAllPreferences() {
   applyDarkMode(getDarkMode());
   applyHighContrast(getHighContrast());
@@ -176,7 +147,6 @@ function applyAllPreferences() {
   applyDataSaver(getDataSaver());
 }
 
-// ── Report a problem ──────────────────────────────────────────
 function reportProblem() {
   const subject = encodeURIComponent('ncrypt - Problem Report');
   const body = encodeURIComponent(
@@ -186,13 +156,8 @@ function reportProblem() {
     `Platform: ${navigator.platform}\n` +
     `User Agent: ${navigator.userAgent}`
   );
-  
-  // Replace with your support email
-  const supportEmail = 'support@ncrypt.app';
-  window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
-  
+  window.location.href = `mailto:support@ncrypt.app?subject=${subject}&body=${body}`;
   toast('Opening email client...', 'info');
 }
 
-// Expose for global access
 window.isDataSaverEnabled = getDataSaver;

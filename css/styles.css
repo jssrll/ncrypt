@@ -1181,9 +1181,7 @@ input:checked + .toggle-slider:before {
   transform: translateX(22px);
 }
 
-/* ============================================================
-   DARK MODE THEME
-============================================================ */
+/* Also ensure theme classes are at the end */
 html.dark-mode {
   --bg: #1A1A1E !important;
   --bg-sidebar: #121214 !important;
@@ -1193,65 +1191,22 @@ html.dark-mode {
   --text-muted: #6B6B72 !important;
   --border: #2C2C30 !important;
   --border-light: #2C2C30 !important;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-/* ============================================================
-   HIGH CONTRAST MODE
-============================================================ */
 html.high-contrast {
   --accent: #FF6B35 !important;
-  --accent-light: #FFE0D0 !important;
   --accent-dark: #E85520 !important;
-  --text-primary: #000000 !important;
-  --text-secondary: #1A1A1A !important;
-  --border: #000000 !important;
 }
 
 html.dark-mode.high-contrast {
-  --text-primary: #FFFFFF !important;
-  --text-secondary: #E0E0E0 !important;
-  --border: #FFFFFF !important;
   --bg: #000000 !important;
   --bg-card: #0A0A0A !important;
-  --bg-sidebar: #050505 !important;
 }
 
-/* ============================================================
-   FONT SIZE VARIATIONS
-============================================================ */
-html.font-small {
-  --font-body-size: 13px;
-}
-html.font-medium {
-  --font-body-size: 15px;
-}
-html.font-large {
-  --font-body-size: 17px;
-}
+html.font-small { --font-body-size: 13px; }
+html.font-medium { --font-body-size: 15px; }
+html.font-large { --font-body-size: 17px; }
 
 body {
   font-size: var(--font-body-size, 15px);
-}
-.message-bubble {
-  font-size: calc(var(--font-body-size, 15px) - 1px);
-}
-.conv-name {
-  font-size: calc(var(--font-body-size, 15px) - 0px);
-}
-
-/* ============================================================
-   DATA SAVER MODE HINTS
-============================================================ */
-html.data-saver img:not([data-no-saver]),
-html.data-saver video:not([data-no-saver]) {
-  filter: blur(5px) grayscale(0.5);
-  transition: filter 0.2s;
-  cursor: pointer;
-}
-html.data-saver img:hover,
-html.data-saver video:hover {
-  filter: none;
 }
