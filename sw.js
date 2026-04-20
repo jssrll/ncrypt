@@ -9,12 +9,10 @@ const STATIC_ASSETS = [
   '/js/api.js',
   '/js/auth.js',
   '/js/messaging.js',
-  '/js/qrcode.js',
   '/js/profile.js',
   '/js/settings.js',
   '/js/ui.js',
   '/js/attach.js'
-  // Removed manifest.json and icons until they exist
 ];
 
 // Install: cache static assets
