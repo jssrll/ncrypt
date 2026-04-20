@@ -1092,3 +1092,14 @@ body.offline .offline-indicator { transform: translateY(0); }
     font-size: 13px;
   }
 }
+
+.install-banner {
+  /* existing styles + */
+  border: 2px solid var(--accent);
+  animation: gentlePulse 2s infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { box-shadow: 0 8px 24px rgba(217,113,78,0.2); }
+  50% { box-shadow: 0 8px 32px rgba(217,113,78,0.5); }
+}

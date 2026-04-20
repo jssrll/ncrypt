@@ -1,106 +1,136 @@
 // ============================================================
-//  PWA INSTALL PROMPT HANDLER
+//  PWA AGGRESSIVE INSTALL PROMPT
 // ============================================================
 
 let deferredPrompt = null;
 const installBanner = document.getElementById('install-banner');
 const installBtn = document.getElementById('install-btn');
 const installClose = document.getElementById('install-close');
+const installText = document.querySelector('.install-text p');
 
-// Check if app is already installed
+// Track if user dismissed the banner
+let bannerDismissed = false;
+const DISMISS_KEY = 'ncrypt_install_dismissed';
+const DISMISS_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Check if app is installed (standalone mode)
 function isAppInstalled() {
   return window.matchMedia('(display-mode: standalone)').matches ||
-         window.navigator.standalone === true; // iOS Safari
+         window.navigator.standalone === true;
 }
 
-// Show the install banner
-function showInstallBanner() {
-  if (installBanner && !isAppInstalled()) {
-    installBanner.classList.remove('hidden');
+// Check if banner was recently dismissed
+function isBannerDismissed() {
+  const dismissed = localStorage.getItem(DISMISS_KEY);
+  if (!dismissed) return false;
+  const timestamp = parseInt(dismissed, 10);
+  return (Date.now() - timestamp) < DISMISS_EXPIRY;
+}
+
+// Mark banner as dismissed
+function setBannerDismissed() {
+  localStorage.setItem(DISMISS_KEY, Date.now().toString());
+  bannerDismissed = true;
+}
+
+// Show the banner (with optional custom message for iOS)
+function showInstallBanner(message = null) {
+  if (!installBanner) return;
+  if (isAppInstalled()) return;
+  if (bannerDismissed || isBannerDismissed()) return;
+  
+  // Customise text for iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (installText) {
+    installText.textContent = message || (isIOS 
+      ? 'Tap Share → "Add to Home Screen" to install' 
+      : 'Add to Home Screen for the best experience');
+  }
+  
+  installBanner.classList.remove('hidden');
+}
+
+// Hide banner and remember dismissal
+function hideInstallBanner(remember = true) {
+  if (!installBanner) return;
+  installBanner.classList.add('hidden');
+  if (remember) {
+    setBannerDismissed();
   }
 }
 
-// Hide the install banner
-function hideInstallBanner() {
-  if (installBanner) {
-    installBanner.classList.add('hidden');
+// Handle the install button click
+async function handleInstallClick() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  if (isIOS) {
+    // iOS: show detailed instructions as a modal/toast
+    toast('📱 Tap the Share button, then "Add to Home Screen"', 'info', 6000);
+    hideInstallBanner(true);
+    return;
   }
-}
-
-// Listen for beforeinstallprompt event
-window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent the default mini-infobar from appearing
-  e.preventDefault();
-  // Store the event for later use
-  deferredPrompt = e;
-  // Show our custom install banner
-  showInstallBanner();
-});
-
-// Handle install button click
-if (installBtn) {
-  installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) {
-      // Fallback: show instructions for manual install
-      toast('To install: tap "Share" → "Add to Home Screen"', 'info');
-      hideInstallBanner();
-      return;
-    }
-
-    // Show the install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    // Clear the deferredPrompt variable
-    deferredPrompt = null;
-    
-    // Hide the banner regardless of outcome
-    hideInstallBanner();
-    
-    if (outcome === 'accepted') {
-      toast('Installing ncrypt...', 'success');
-    } else {
-      toast('Installation cancelled', 'info');
-    }
-  });
-}
-
-// Handle close button
-if (installClose) {
-  installClose.addEventListener('click', () => {
-    hideInstallBanner();
-    // Optionally remember that user dismissed it (localStorage)
-  });
-}
-
-// Check if app was successfully installed
-window.addEventListener('appinstalled', () => {
-  hideInstallBanner();
+  
+  if (!deferredPrompt) {
+    // Fallback – show manual instructions
+    toast('Tap the menu (⋮) → "Install app" or "Add to Home Screen"', 'info', 5000);
+    hideInstallBanner(true);
+    return;
+  }
+  
+  // Show native prompt
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
   deferredPrompt = null;
-  toast('ncrypt installed successfully! 🎉', 'success');
-});
+  
+  if (outcome === 'accepted') {
+    toast('🎉 Installing ncrypt…', 'success');
+  } else {
+    toast('Maybe later!', 'info');
+  }
+  hideInstallBanner(false); // don't permanently dismiss – user may reconsider
+}
 
-// Show banner on page load if installable (some browsers don't fire beforeinstallprompt immediately)
-window.addEventListener('load', () => {
-  // If we already have a deferredPrompt, show the banner
-  if (deferredPrompt && !isAppInstalled()) {
+// -------- Event Listeners --------
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show banner immediately if not installed
+  if (!isAppInstalled()) {
     showInstallBanner();
   }
 });
 
-// For iOS Safari users (no beforeinstallprompt), optionally show a help banner
-function showIOSInstallHelp() {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const isStandalone = window.navigator.standalone;
-  
-  if (isIOS && !isStandalone) {
-    // You could show a different banner with instructions
-    // For now, we'll just log, but you can customize
-    console.log('iOS user can install via Share menu');
-    // Optionally show a one-time tooltip
-  }
+if (installBtn) {
+  installBtn.addEventListener('click', handleInstallClick);
 }
 
-showIOSInstallHelp();
+if (installClose) {
+  installClose.addEventListener('click', () => hideInstallBanner(true));
+}
+
+// If the app gets installed later, hide banner
+window.addEventListener('appinstalled', () => {
+  hideInstallBanner(false);
+  deferredPrompt = null;
+  toast('✅ ncrypt installed!', 'success');
+});
+
+// Show banner after a short delay if still not installed (catch browsers that fire event late)
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!isAppInstalled() && !deferredPrompt) {
+      // If no deferredPrompt yet, we still show banner (with generic text)
+      showInstallBanner();
+    }
+  }, 3000);
+});
+
+// -------- Manual trigger from Settings (optional) --------
+function triggerInstallFromSettings() {
+  bannerDismissed = false; // reset dismissal for this session
+  showInstallBanner();
+  toast('Tap "Install" to add ncrypt to your home screen', 'info');
+}
+
+// Expose to global so settings.js can call it
+window.triggerInstallFromSettings = triggerInstallFromSettings;
