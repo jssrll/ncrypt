@@ -1087,3 +1087,169 @@ body.offline .offline-indicator { transform: translateY(0); }
     font-size: 13px;
   }
 }
+
+/* ============================================================
+   SETTINGS UI COMPONENTS
+============================================================ */
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  margin-top: 8px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-item-left .material-icons-round {
+  color: var(--accent);
+  font-size: 22px;
+}
+
+.settings-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: -8px;
+  margin-bottom: 8px;
+  padding-left: 34px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border);
+  transition: 0.2s;
+  border-radius: 34px;
+}
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+input:checked + .toggle-slider {
+  background-color: var(--accent);
+}
+input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+/* ============================================================
+   DARK MODE THEME
+============================================================ */
+.dark-mode {
+  --bg: #1A1A1E;
+  --bg-sidebar: #121214;
+  --bg-card: #1E1E22;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1A9;
+  --text-muted: #6B6B72;
+  --border: #2C2C30;
+  --border-light: #2C2C30;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* ============================================================
+   HIGH CONTRAST MODE
+============================================================ */
+.high-contrast {
+  --accent: #FF6B35;
+  --accent-light: #FFE0D0;
+  --accent-dark: #E85520;
+  --text-primary: #000000;
+  --text-secondary: #1A1A1A;
+  --border: #000000;
+}
+.dark-mode.high-contrast {
+  --text-primary: #FFFFFF;
+  --text-secondary: #E0E0E0;
+  --border: #FFFFFF;
+  --bg: #000000;
+  --bg-card: #0A0A0A;
+}
+
+/* ============================================================
+   FONT SIZE VARIATIONS
+============================================================ */
+.font-small {
+  --font-body-size: 13px;
+}
+.font-medium {
+  --font-body-size: 15px;
+}
+.font-large {
+  --font-body-size: 17px;
+}
+
+body {
+  font-size: var(--font-body-size, 15px);
+}
+.message-bubble {
+  font-size: calc(var(--font-body-size, 15px) - 1px);
+}
+.conv-name {
+  font-size: calc(var(--font-body-size, 15px) - 0px);
+}
+
+/* ============================================================
+   DATA SAVER MODE HINTS
+============================================================ */
+.data-saver img:not([data-no-saver]),
+.data-saver video:not([data-no-saver]) {
+  filter: blur(5px) grayscale(0.5);
+  transition: filter 0.2s;
+  cursor: pointer;
+}
+.data-saver img:hover,
+.data-saver video:hover {
+  filter: none;
+}

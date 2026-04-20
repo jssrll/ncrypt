@@ -213,7 +213,7 @@
         <span>Send Image</span>
       </button>
       <button class="attach-option" id="attach-video">
-        <div class="attach-option-icon" style="background:#DC2626;">
+        <div class="attach-option-icon" style="background:#16A34A;">
           <span class="material-icons-round">videocam</span>
         </div>
         <span>Send Video</span>
@@ -306,12 +306,80 @@
         <button class="btn-icon modal-close" data-modal="settings-modal"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
+        <!-- Appearance Section -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Appearance</h3>
+          
+          <div class="settings-item">
+            <div class="settings-item-left">
+              <span class="material-icons-round">dark_mode</span>
+              <span>Dark Mode</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="dark-mode-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          
+          <div class="settings-item">
+            <div class="settings-item-left">
+              <span class="material-icons-round">contrast</span>
+              <span>High Contrast</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="high-contrast-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          
+          <div class="settings-item">
+            <div class="settings-item-left">
+              <span class="material-icons-round">text_fields</span>
+              <span>Font Size</span>
+            </div>
+            <select id="font-size-select" class="settings-select">
+              <option value="small">Small</option>
+              <option value="medium" selected>Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Data & Storage -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Data & Storage</h3>
+          
+          <div class="settings-item">
+            <div class="settings-item-left">
+              <span class="material-icons-round">data_saver_on</span>
+              <span>Data Saver Mode</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="data-saver-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <p class="settings-hint">Reduces image/video quality and disables auto‑play.</p>
+        </div>
+        
+        <!-- Support -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Support</h3>
+          
+          <button class="settings-btn" id="report-problem-btn">
+            <span class="material-icons-round">bug_report</span>
+            <span>Report a Problem</span>
+          </button>
+        </div>
+        
+        <!-- Account -->
         <div class="settings-section">
           <button class="settings-btn danger" id="settings-logout-btn">
             <span class="material-icons-round">logout</span>
             <span>Logout</span>
           </button>
         </div>
+        
         <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:16px;">ncrypt v1.0.0</p>
       </div>
     </div>
@@ -356,6 +424,8 @@
         <p>Add to Home Screen for a full app experience</p>
       </div>
       <button class="install-btn" id="install-btn">Install</button>
+      <button class="install-close" id="install-close">
+        <span class="material-icons-round">close</span>
       </button>
     </div>
   </div>
