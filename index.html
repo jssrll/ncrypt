@@ -226,7 +226,7 @@
   <input type="file" id="file-input-image" accept="image/*" style="display:none;">
   <input type="file" id="file-input-video" accept="video/*" style="display:none;">
 
-  <!-- Profile Modal (own profile) -->
+  <!-- Profile Modal -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-container">
@@ -256,7 +256,7 @@
     </div>
   </div>
 
-  <!-- Contact Info Modal (other user's profile) -->
+  <!-- Contact Info Modal -->
   <div id="contact-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-container">
@@ -406,7 +406,6 @@
       document.body.appendChild(banner);
     }
 
-    // Online/offline detection
     function updateOnlineStatus() {
       document.body.classList.toggle('offline', !navigator.onLine);
     }
