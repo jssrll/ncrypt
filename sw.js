@@ -1,5 +1,5 @@
-// ncrypt Service Worker v1.0
-const CACHE_NAME = 'ncrypt-v1';
+// ncrypt Service Worker v1.1
+const CACHE_NAME = 'ncrypt-v1.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -12,18 +12,26 @@ const STATIC_ASSETS = [
   '/js/profile.js',
   '/js/settings.js',
   '/js/ui.js',
-  '/js/attach.js'
+  '/js/attach.js',
+  '/js/pwa.js',
+  '/manifest.json',
+  '/icons/favicon.ico',
+  '/icons/favicon-16x16.png',
+  '/icons/favicon-32x32.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/android-chrome-192x192.png',
+  '/icons/android-chrome-512x512.png'
 ];
 
 // Install: cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use addAll but catch errors for missing files
+      // Use allSettled so one missing file doesn't break the whole cache
       return Promise.allSettled(
         STATIC_ASSETS.map(url => 
           cache.add(url).catch(err => {
-            console.warn(`Failed to cache ${url}:`, err);
+            console.warn(`[SW] Failed to cache ${url}:`, err);
           })
         )
       );
@@ -52,7 +60,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML
+  // Network-first for HTML (navigation)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('/index.html'))
@@ -64,6 +72,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {
+        // Cache valid GET responses
         if (response && response.ok && event.request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));

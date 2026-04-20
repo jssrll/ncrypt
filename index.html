@@ -358,6 +358,7 @@
   <script src="js/settings.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/attach.js"></script>
+  <script src="js/pwa.js"></script>
 
   <!-- Register Service Worker -->
   <script>
@@ -392,5 +393,22 @@
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
   </script>
+
+<!-- Install Prompt Banner -->
+<div id="install-banner" class="install-banner hidden">
+  <div class="install-banner-content">
+    <div class="install-icon">
+      <span class="material-icons-round">chat</span>
+    </div>
+    <div class="install-text">
+      <h4>Install ncrypt</h4>
+      <p>Add to Home Screen for a full app experience</p>
+    </div>
+    <button class="install-btn" id="install-btn">Install</button>
+    <button class="install-close" id="install-close">
+      <span class="material-icons-round">close</span>
+    </button>
+  </div>
+</div>
 </body>
 </html>
