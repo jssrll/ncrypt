@@ -1,5 +1,5 @@
 // ============================================================
-//  PWA AGGRESSIVE INSTALL PROMPT – NO ESCAPE
+//  PWA PERSISTENT INSTALL PROMPT – REAPPEARS EVERY 30 SECONDS
 // ============================================================
 
 let deferredPrompt = null;
@@ -8,7 +8,8 @@ const installBtn = document.getElementById('install-btn');
 const installClose = document.getElementById('install-close');
 const installText = document.querySelector('.install-text p');
 
-// We do NOT use localStorage – the banner always comes back
+let bannerInterval = null;
+const REAPPEAR_DELAY = 30000; // 30 seconds
 
 function isAppInstalled() {
   return window.matchMedia('(display-mode: standalone)').matches ||
@@ -17,7 +18,10 @@ function isAppInstalled() {
 
 function showInstallBanner() {
   if (!installBanner) return;
-  if (isAppInstalled()) return; // already installed – stop forever
+  if (isAppInstalled()) {
+    stopBannerInterval();
+    return;
+  }
   
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (installText) {
@@ -32,7 +36,20 @@ function showInstallBanner() {
 function hideInstallBanner() {
   if (!installBanner) return;
   installBanner.classList.add('hidden');
-  // NO permanent dismissal – it will come back on next interaction
+}
+
+function stopBannerInterval() {
+  if (bannerInterval) {
+    clearInterval(bannerInterval);
+    bannerInterval = null;
+  }
+}
+
+function startBannerInterval() {
+  stopBannerInterval(); // Clear any existing
+  bannerInterval = setInterval(() => {
+    showInstallBanner();
+  }, REAPPEAR_DELAY);
 }
 
 async function handleInstallClick() {
@@ -62,57 +79,38 @@ async function handleInstallClick() {
   hideInstallBanner();
 }
 
-// ── Persistent re‑show on ANY user interaction ────────────────
-function aggressiveShow() {
-  if (isAppInstalled()) return;
-  showInstallBanner();
-}
-
-// Throttle to avoid spamming during rapid clicks
-let pendingShow = false;
-function scheduleAggressiveShow() {
-  if (pendingShow) return;
-  pendingShow = true;
-  requestAnimationFrame(() => {
-    aggressiveShow();
-    pendingShow = false;
-  });
-}
-
-// Attach listeners to all meaningful user interactions
-const interactionEvents = ['click', 'touchstart', 'keydown', 'scroll'];
-interactionEvents.forEach(evt => {
-  document.addEventListener(evt, scheduleAggressiveShow, { passive: true });
-});
-
-// Also show after any navigation (including back/forward)
-window.addEventListener('pageshow', scheduleAggressiveShow);
-
-// ── Standard PWA install events ───────────────────────────────
+// ── Event listeners ───────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   showInstallBanner();
+  startBannerInterval();
 });
 
 if (installBtn) installBtn.addEventListener('click', handleInstallClick);
 
-// Close button only hides temporarily – next interaction brings it back
 if (installClose) {
   installClose.addEventListener('click', () => {
     hideInstallBanner();
+    // The interval will show it again in 30 seconds
   });
 }
 
-// Once installed, stop showing forever
+// When the app is installed, stop the interval permanently
 window.addEventListener('appinstalled', () => {
   hideInstallBanner();
+  stopBannerInterval();
   deferredPrompt = null;
   toast('✅ ncrypt installed!', 'success');
-  // Remove all aggressive listeners? Not necessary – isAppInstalled() will block showing
 });
 
-// Initial show after load
+// Initial show after page load
 window.addEventListener('load', () => {
-  setTimeout(showInstallBanner, 1000);
+  setTimeout(() => {
+    showInstallBanner();
+    startBannerInterval();
+  }, 1000);
 });
+
+// If the user switches tabs and comes back, we keep the interval running.
+// No need to pause on blur because the interval is just a timer.
