@@ -420,7 +420,7 @@ async function handleUserSearch(query) {
       <div class="search-result-avatar">${getInitials(user.name)}</div>
       <div class="search-result-info">
         <div class="search-result-name">${escapeHtml(user.name)}</div>
-        <div class="search-result-id">${user.id?.slice(0, 12) || '—'}</div>
+        <div class="search-result-id" style="font-size:11px;word-break:break-all;color:var(--text-muted);">${escapeHtml(user.id) || '—'}</div>
       </div>
     </div>`).join('');
 
