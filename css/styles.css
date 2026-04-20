@@ -978,21 +978,23 @@ body.offline .offline-indicator { transform: translateY(0); }
 }
 
 /* ============================================================
-   INSTALL BANNER
+   PERSISTENT INSTALL BAR – NEVER DISMISSIBLE
 ============================================================ */
 .install-banner {
   position: fixed;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
   z-index: 4000;
-  animation: slideUp 0.3s ease;
-  max-width: 500px;
-  margin: 0 auto;
+  padding: env(safe-area-inset-bottom) 0 0 0;
+  max-width: none;
+  margin: 0;
+  animation: none;
+  border: none;
+  border-top: 1px solid var(--border);
 }
 
 .install-banner-content {
@@ -1000,6 +1002,8 @@ body.offline .offline-indicator { transform: translateY(0); }
   align-items: center;
   padding: 12px 16px;
   gap: 12px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .install-icon {
@@ -1057,31 +1061,22 @@ body.offline .offline-indicator { transform: translateY(0); }
   transform: scale(0.98);
 }
 
+/* Hide the close button completely */
 .install-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.1s;
-  flex-shrink: 0;
-  margin-left: -4px;
-}
-.install-close:hover {
-  background: var(--border-light);
-}
-.install-close .material-icons-round {
-  font-size: 18px;
+  display: none !important;
 }
 
+/* Remove any pulsing animation */
+.install-banner {
+  animation: none !important;
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+/* Small mobile adjustments */
 @media (max-width: 480px) {
-  .install-banner {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
+  .install-banner-content {
+    padding: 10px 12px;
   }
   .install-text p {
     white-space: normal;
@@ -1091,15 +1086,4 @@ body.offline .offline-indicator { transform: translateY(0); }
     padding: 8px 14px;
     font-size: 13px;
   }
-}
-
-.install-banner {
-  /* existing styles + */
-  border: 2px solid var(--accent);
-  animation: gentlePulse 2s infinite;
-}
-
-@keyframes gentlePulse {
-  0%, 100% { box-shadow: 0 8px 24px rgba(217,113,78,0.2); }
-  50% { box-shadow: 0 8px 32px rgba(217,113,78,0.5); }
 }
