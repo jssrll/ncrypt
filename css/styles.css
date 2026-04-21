@@ -54,6 +54,21 @@ a { text-decoration: none; color: inherit; cursor: pointer; }
 ::-webkit-scrollbar { display: none; }
 * { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ── Remove tap highlight and improve touch responsiveness ── */
+button, a, .clickable, [role="button"], .conversation-item, .search-result-item {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.btn-icon:active,
+.attach-option:active,
+.settings-item.clickable:active,
+.conversation-item:active,
+.search-result-item:active {
+  transition: none;
+  background: var(--border) !important;
+}
+
 /* ============================================================
    OFFLINE INDICATOR
 ============================================================ */
@@ -914,11 +929,10 @@ body.offline .offline-indicator { transform: translateY(0); }
     max-width: 380px;
     height: 100%;
     border-right: 1px solid var(--border);
-    display: flex !important; /* override hidden */
+    display: flex !important;
     flex-direction: column;
     z-index: 1;
   }
-  /* On desktop, conversations screen is always visible */
   .conversations-screen.hidden {
     display: flex !important;
     transform: none !important;
@@ -931,20 +945,12 @@ body.offline .offline-indicator { transform: translateY(0); }
     display: flex !important;
     z-index: 1;
   }
-  /* On desktop, chat screen shows placeholder when no chat open */
   .chat-screen.hidden {
     display: flex !important;
     transform: none !important;
   }
 
-  /* Hide back button on desktop */
   #back-to-conversations { display: none !important; }
-
-  /* Desktop: empty state when no chat selected */
-  .chat-screen.hidden::before {
-    content: '';
-    display: none;
-  }
 
   .modal-container {
     border-radius: 20px;
@@ -1061,19 +1067,16 @@ body.offline .offline-indicator { transform: translateY(0); }
   transform: scale(0.98);
 }
 
-/* Hide the close button completely */
 .install-close {
   display: none !important;
 }
 
-/* Remove any pulsing animation */
 .install-banner {
   animation: none !important;
   border: none !important;
   border-top: 1px solid var(--border) !important;
 }
 
-/* Small mobile adjustments */
 @media (max-width: 480px) {
   .install-banner-content {
     padding: 10px 12px;
@@ -1181,7 +1184,7 @@ input:checked + .toggle-slider:before {
   transform: translateX(22px);
 }
 
-/* Also ensure theme classes are at the end */
+/* Theme classes */
 html.dark-mode {
   --bg: #1A1A1E !important;
   --bg-sidebar: #121214 !important;

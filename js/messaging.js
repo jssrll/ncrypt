@@ -1,6 +1,9 @@
 // ============================================================
-//  MESSAGING - COMPLETE WITH ATTACHMENT SUPPORT
+//  MESSAGING - OPTIMIZED + ACTIVE STATUS
 // ============================================================
+
+// Track last active timestamps for users
+const userLastActive = new Map(); // userId -> timestamp
 
 function initializeMessenger() {
   if (!currentUser) return;
@@ -12,9 +15,6 @@ function initializeMessenger() {
 }
 
 // ── File content parser ───────────────────────────────────────
-// Parses the JSON envelope that attach.js encodes into every
-// file message. Returns { _ncrypt_type, _ncrypt_name, _ncrypt_url }
-// or null if the content is a plain text message.
 function parseFileContent(content) {
   if (!content || content[0] !== '{') return null;
   try {
@@ -41,13 +41,11 @@ function resolveDisplayUrl(driveUrl, type) {
   const fileId = getDriveFileIdFromMsg(driveUrl);
   if (!fileId) return driveUrl;
   if (type === 'image') return `https://lh3.googleusercontent.com/d/${fileId}`;
-  // video, audio, file
   return `https://drive.google.com/uc?export=download&id=${fileId}`;
 }
 
 // Enhances a raw server message with parsed type/URL fields
 function enhanceMessage(msg) {
-  // Already enhanced (e.g. from local cache)
   if (msg._enhanced) return msg;
 
   const parsed = parseFileContent(msg.content);
@@ -55,9 +53,8 @@ function enhanceMessage(msg) {
     msg.type = parsed._ncrypt_type;
     msg.fileName = parsed._ncrypt_name;
     msg._fileUrl = resolveDisplayUrl(parsed._ncrypt_url, parsed._ncrypt_type);
-    msg._driveUrl = parsed._ncrypt_url; // original Drive URL for download links
+    msg._driveUrl = parsed._ncrypt_url;
   } else if (!msg.type || msg.type === 'text') {
-    // Legacy fallback: plain Drive URL stored as text (old messages)
     if (msg.content && msg.content.includes('drive.google.com')) {
       msg.type = 'file';
       msg._fileUrl = msg.content;
@@ -100,14 +97,12 @@ function renderConversationsList() {
     const last = conv.lastMessage || {};
     const active = activeConversation?.conversationId === conv.conversationId;
 
-    // Format last message preview based on type
     let previewText = '';
     if (last.type === 'image') previewText = '📷 Image';
     else if (last.type === 'video') previewText = '🎬 Video';
     else if (last.type === 'audio') previewText = '🎤 Voice message';
     else if (last.type === 'file') previewText = `📎 ${last.fileName || 'File'}`;
     else {
-      // Check if it's a file content envelope
       const parsed = parseFileContent(last.content);
       if (parsed) {
         const icons = { image: '📷', video: '🎬', audio: '🎤', file: '📎' };
@@ -141,22 +136,70 @@ function renderConversationsList() {
   });
 }
 
-// Open a conversation
+// Helper: get the most recent message timestamp from a specific user
+function getLastMessageTimeFromUser(userId) {
+  let latest = 0;
+  for (const messages of messagesCache.values()) {
+    for (const msg of messages) {
+      if (msg.senderId === userId) {
+        const time = new Date(msg.timestamp).getTime();
+        if (time > latest) latest = time;
+      }
+    }
+  }
+  return latest || null;
+}
+
+// Update active status display in chat header
+function updateActiveStatus(conversation) {
+  const otherId = conversation.otherUser?.id;
+  if (!otherId) return;
+  
+  const lastActive = userLastActive.get(otherId) || getLastMessageTimeFromUser(otherId);
+  const isActive = lastActive && (Date.now() - lastActive < 5 * 60 * 1000);
+  
+  const statusEl = document.getElementById('chat-status');
+  if (statusEl) {
+    statusEl.textContent = isActive ? 'Active now' : 'Inactive';
+    statusEl.style.color = isActive ? '#16A34A' : 'var(--text-muted)';
+  }
+}
+
+// Open a conversation – immediate UI, async message loading
 async function openConversation(conversation) {
   activeConversation = conversation;
 
-  // Show chat screen, hide conversations on mobile
+  // Show chat screen instantly
   document.getElementById('chat-screen').classList.remove('hidden');
   document.getElementById('conversations-screen').classList.add('hidden');
 
   const other = conversation.otherUser || {};
   document.getElementById('chat-avatar').textContent = getInitials(other.name);
   document.getElementById('chat-name').textContent = other.name || 'Unknown';
-  document.getElementById('chat-status').textContent = 'Online';
-
-  await loadMessages(conversation.conversationId);
+  
+  updateActiveStatus(conversation);
   renderConversationsList();
-  scrollToBottom();
+
+  // Load from cache first
+  const cachedMessages = messagesCache.get(conversation.conversationId);
+  if (cachedMessages) {
+    renderMessages(conversation.conversationId);
+    scrollToBottom();
+  } else {
+    document.getElementById('messages-container').innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">
+        <span class="spinner"></span>
+      </div>`;
+  }
+
+  // Fetch fresh messages asynchronously
+  loadMessages(conversation.conversationId).then(() => {
+    if (activeConversation?.conversationId === conversation.conversationId) {
+      renderMessages(conversation.conversationId);
+      scrollToBottom();
+    }
+  });
+
   document.getElementById('message-input').focus();
 }
 
@@ -166,8 +209,9 @@ async function loadMessages(conversationId) {
   if (result.success) {
     const enhanced = (result.messages || []).map(enhanceMessage);
     messagesCache.set(conversationId, enhanced);
-    renderMessages(conversationId);
+    return enhanced;
   }
+  return [];
 }
 
 // ── Render messages with full attachment support ───────────────
@@ -201,9 +245,7 @@ function renderMessages(conversationId) {
     const bubbleClass = msg.pending ? 'pending' : msg.failed ? 'failed' : '';
     const msgType = msg.type || 'text';
 
-    // The resolved display URL (already converted from Drive URL in enhanceMessage)
     const displayUrl = msg._fileUrl || msg.content;
-    // Original Drive URL for download links
     const driveUrl = msg._driveUrl || msg.content;
     const fileName = msg.fileName || 'File';
 
@@ -271,7 +313,6 @@ function renderMessages(conversationId) {
           </div>
         </div>`;
     } else {
-      // Plain text
       const displayContent = (msg.content && msg.content[0] === '{')
         ? '📎 Attachment'
         : escapeHtml(msg.content).replace(/\n/g, '<br>');
@@ -339,7 +380,6 @@ function addOptimisticMessage(msgData) {
   messagesCache.set(activeConversation.conversationId, messages);
   renderMessages(activeConversation.conversationId);
 
-  // Update sidebar preview
   let preview = msgData.content;
   if (msgData.type === 'image') preview = '📷 Image';
   else if (msgData.type === 'video') preview = '🎬 Video';
@@ -362,11 +402,13 @@ function updateConversationLastMessage(convId, content) {
 async function sendMessageAsync(conversationId, content, tempId) {
   try {
     const result = await sendMessage(conversationId, content);
+    if (result.success) {
+      userLastActive.set(currentUser.id, Date.now());
+    }
     const messages = messagesCache.get(conversationId) || [];
     const index = messages.findIndex(m => m.id === tempId);
     if (result.success) {
       if (index !== -1) {
-        // Merge server message but keep local type/URL fields
         const local = messages[index];
         messages[index] = {
           ...result.message,
@@ -380,6 +422,7 @@ async function sendMessageAsync(conversationId, content, tempId) {
         messagesCache.set(conversationId, messages);
       }
       await loadConversations();
+      if (activeConversation) updateActiveStatus(activeConversation);
     } else {
       if (index !== -1) {
         messages[index].pending = false;
@@ -469,7 +512,7 @@ function escapeHtml(text) {
   );
 }
 
-// Open contact info modal for the active conversation's other user
+// Open contact info modal
 function openContactInfo() {
   if (!activeConversation) return;
   const other = activeConversation.otherUser || {};
@@ -504,16 +547,12 @@ function setupMessengerEvents() {
     }
   });
 
-  // Send button
   document.getElementById('send-message-btn').addEventListener('click', handleSendMessage);
   document.getElementById('message-input').addEventListener('keypress', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   });
 
-  // Back button (mobile + desktop)
   document.getElementById('back-to-conversations').addEventListener('click', closeChat);
-
-  // Info/contact button
   document.getElementById('chat-profile-btn').addEventListener('click', openContactInfo);
   document.getElementById('chat-user-info-click').addEventListener('click', openContactInfo);
 }
@@ -535,6 +574,13 @@ function startMessagePolling() {
           messagesCache.set(activeConversation.conversationId, enhanced);
           renderMessages(activeConversation.conversationId);
         }
+        // Update active status based on fresh messages
+        const otherId = activeConversation.otherUser?.id;
+        if (otherId) {
+          const lastMsgTime = getLastMessageTimeFromUser(otherId);
+          if (lastMsgTime) userLastActive.set(otherId, lastMsgTime);
+          updateActiveStatus(activeConversation);
+        }
       }
     }
   }, 2000);
@@ -547,12 +593,11 @@ function stopMessagePolling() {
   }
 }
 
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   stopMessagePolling();
 });
 
-// Exports for global access
+// Exports
 window.openConversation = openConversation;
 window.closeChat = closeChat;
 window.renderConversationsList = renderConversationsList;
