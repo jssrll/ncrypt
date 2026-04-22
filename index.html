@@ -130,6 +130,9 @@
               <span>ncrypt</span>
             </div>
             <div class="sidebar-header-actions">
+              <button class="btn-icon" id="sidebar-world-chat" title="World Chat">
+                <span class="material-icons-round">public</span>
+              </button>
               <button class="btn-icon" id="sidebar-profile" title="Profile">
                 <span class="material-icons-round">person</span>
               </button>
@@ -153,6 +156,42 @@
         </div>
       </div>
 
+      <!-- World Chat Screen -->
+      <div id="world-chat-screen" class="world-chat-screen hidden">
+        <div class="world-chat-container">
+          <div class="chat-header">
+            <button class="btn-icon" id="back-from-world-chat" title="Back">
+              <span class="material-icons-round">arrow_back</span>
+            </button>
+            <div class="chat-user-info">
+              <div class="chat-avatar" style="background: linear-gradient(135deg, #3B82F6, #1D4ED8);">
+                <span class="material-icons-round">public</span>
+              </div>
+              <div class="chat-user-details">
+                <span class="chat-name">World Chat</span>
+                <span class="chat-status" id="world-chat-status">Everyone</span>
+              </div>
+            </div>
+            <div class="chat-header-actions">
+              <button class="btn-icon" id="world-chat-info-btn" title="Info">
+                <span class="material-icons-round">info</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="messages-container" id="world-messages-container"></div>
+
+          <div class="message-input-container">
+            <div class="message-form">
+              <input type="text" id="world-message-input" class="message-input" placeholder="Message everyone..." autocomplete="off">
+              <button type="button" class="btn-send" id="send-world-message-btn">
+                <span class="material-icons-round">send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Chat Screen -->
       <div id="chat-screen" class="chat-screen hidden">
         <div class="chat-header">
@@ -171,6 +210,15 @@
               <span class="material-icons-round">info</span>
             </button>
           </div>
+        </div>
+
+        <!-- Reply Bar -->
+        <div id="reply-bar" class="reply-bar hidden">
+          <span class="material-icons-round">reply</span>
+          <span class="reply-preview-text" id="reply-preview-text">Replying to...</span>
+          <button class="btn-icon" id="cancel-reply-btn" title="Cancel reply">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
 
         <div class="messages-container" id="messages-container"></div>
@@ -226,6 +274,17 @@
   <input type="file" id="file-input-image" accept="image/*" style="display:none;">
   <input type="file" id="file-input-video" accept="video/*" style="display:none;">
 
+  <!-- Message Context Menu -->
+  <div id="message-context-menu" class="message-context-menu hidden">
+    <div class="context-menu-item" data-action="reply"><span class="material-icons-round">reply</span>Reply</div>
+    <div class="context-menu-item" data-action="translate"><span class="material-icons-round">translate</span>Translate</div>
+    <div class="context-menu-item" data-action="forward"><span class="material-icons-round">forward</span>Forward</div>
+    <div class="context-menu-reactions">
+      <span data-emoji="👍">👍</span><span data-emoji="❤️">❤️</span><span data-emoji="😆">😆</span>
+      <span data-emoji="😮">😮</span><span data-emoji="😢">😢</span><span data-emoji="😡">😡</span>
+    </div>
+  </div>
+
   <!-- Profile Modal -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-overlay"></div>
@@ -240,15 +299,80 @@
           <div class="profile-info">
             <h3 id="profile-name">—</h3>
             <p id="profile-email">—</p>
-            <p class="profile-id-label">ID: <span id="profile-id">—</span></p>
+            <div class="profile-id-row">
+              <span class="profile-id-label">ID: </span>
+              <span class="profile-id-value" id="profile-id">—</span>
+              <button class="btn-icon-small" id="copy-id-btn-inline" title="Copy ID">
+                <span class="material-icons-round">content_copy</span>
+              </button>
+            </div>
           </div>
         </div>
-        <div class="profile-actions">
-          <button class="profile-action-btn" id="copy-id-btn" style="grid-column: span 1; width: 100%;">
-            <span class="material-icons-round">content_copy</span>
-            <span>Copy My ID</span>
-          </button>
+        
+        <!-- Mood Status Section -->
+        <div class="profile-section">
+          <div class="profile-section-header">
+            <h4>Mood Status</h4>
+            <span class="mood-reset-info">Resets at 12:00 AM</span>
+          </div>
+          <div class="mood-selector" id="mood-selector">
+            <div class="current-mood" id="current-mood-display">
+              <span class="mood-emoji" id="current-mood-emoji">😊</span>
+              <span class="mood-text" id="current-mood-text">Happy</span>
+              <span class="material-icons-round mood-expand">expand_more</span>
+            </div>
+            <div class="mood-dropdown hidden" id="mood-dropdown">
+              <div class="mood-option" data-mood="happy" data-emoji="😊">😊 Happy</div>
+              <div class="mood-option" data-mood="sad" data-emoji="😢">😢 Sad</div>
+              <div class="mood-option" data-mood="excited" data-emoji="🤩">🤩 Excited</div>
+              <div class="mood-option" data-mood="love" data-emoji="❤️">❤️ In Love</div>
+              <div class="mood-option" data-mood="angry" data-emoji="😠">😠 Angry</div>
+              <div class="mood-option" data-mood="tired" data-emoji="😴">😴 Tired</div>
+              <div class="mood-option" data-mood="sick" data-emoji="🤒">🤒 Sick</div>
+              <div class="mood-option" data-mood="cool" data-emoji="😎">😎 Cool</div>
+              <div class="mood-option" data-mood="thinking" data-emoji="🤔">🤔 Thinking</div>
+              <div class="mood-option" data-mood="party" data-emoji="🥳">🥳 Partying</div>
+              <div class="mood-option" data-mood="blessed" data-emoji="🙏">🙏 Blessed</div>
+              <div class="mood-option" data-mood="na" data-emoji="😐">😐 N/A</div>
+            </div>
+          </div>
         </div>
+        
+        <!-- Account Information Section -->
+        <div class="profile-section">
+          <h4>Account Information</h4>
+          <div class="account-info-grid">
+            <div class="account-info-item">
+              <span class="material-icons-round">calendar_today</span>
+              <div>
+                <label>Member Since</label>
+                <p id="profile-created">—</p>
+              </div>
+            </div>
+            <div class="account-info-item">
+              <span class="material-icons-round">login</span>
+              <div>
+                <label>Last Login</label>
+                <p id="profile-last-login">—</p>
+              </div>
+            </div>
+            <div class="account-info-item">
+              <span class="material-icons-round">message</span>
+              <div>
+                <label>Total Messages</label>
+                <p id="profile-total-messages">—</p>
+              </div>
+            </div>
+            <div class="account-info-item">
+              <span class="material-icons-round">people</span>
+              <div>
+                <label>Conversations</label>
+                <p id="profile-total-conversations">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <p style="text-align:center; color:var(--text-muted); font-size:12px; margin-top:16px;">
           Share your ID with others to connect
         </p>
@@ -439,6 +563,7 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/messaging.js"></script>
+  <script src="js/world-chat.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/ui.js"></script>
