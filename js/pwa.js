@@ -62,23 +62,28 @@ async function handleInstallClick() {
 function dismissInstallBanner() {
   localStorage.setItem('ncrypt_install_dismissed', 'true');
   installBanner.classList.add('hidden');
+  toast('You can install later from browser menu', 'info', 2000);
 }
 
-// Add close button to banner (update HTML if needed)
 function addDismissButton() {
   const bannerContent = document.querySelector('.install-banner-content');
-  if (bannerContent && !document.querySelector('.install-dismiss')) {
-    const dismissBtn = document.createElement('button');
-    dismissBtn.className = 'install-dismiss';
-    dismissBtn.innerHTML = '<span class="material-icons-round">close</span>';
-    dismissBtn.style.background = 'none';
-    dismissBtn.style.border = 'none';
-    dismissBtn.style.cursor = 'pointer';
-    dismissBtn.style.padding = '8px';
-    dismissBtn.style.color = 'var(--text-muted)';
-    dismissBtn.addEventListener('click', dismissInstallBanner);
-    bannerContent.appendChild(dismissBtn);
-  }
+  if (!bannerContent) return;
+  
+  // Check if dismiss button already exists
+  if (document.querySelector('.install-dismiss')) return;
+  
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'install-dismiss';
+  dismissBtn.setAttribute('aria-label', 'Dismiss install banner');
+  dismissBtn.innerHTML = '<span class="material-icons-round">close</span>';
+  dismissBtn.addEventListener('click', dismissInstallBanner);
+  bannerContent.appendChild(dismissBtn);
+}
+
+// Reset dismiss preference (optional - call this from settings if needed)
+function resetInstallBanner() {
+  localStorage.removeItem('ncrypt_install_dismissed');
+  showInstallBanner();
 }
 
 // Event listeners
@@ -88,7 +93,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
   showInstallBanner();
 });
 
-if (installBtn) installBtn.addEventListener('click', handleInstallClick);
+if (installBtn) {
+  installBtn.addEventListener('click', handleInstallClick);
+}
 
 window.addEventListener('appinstalled', () => {
   installBanner.classList.add('hidden');
@@ -96,7 +103,19 @@ window.addEventListener('appinstalled', () => {
   toast('✅ ncrypt installed!', 'success');
 });
 
+// Show banner on load and add dismiss button
 window.addEventListener('load', () => {
   showInstallBanner();
   addDismissButton();
 });
+
+// Also show on visibility change (when returning to app)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    showInstallBanner();
+    addDismissButton();
+  }
+});
+
+// Export functions for use elsewhere (optional)
+window.resetInstallBanner = resetInstallBanner;

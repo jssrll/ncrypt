@@ -160,4 +160,35 @@ function reportProblem() {
   toast('Opening email client...', 'info');
 }
 
+// Add this to the settings section in settings.js
+
+// Add this function
+function resetInstallBanner() {
+  if (typeof window.resetInstallBanner === 'function') {
+    window.resetInstallBanner();
+    toast('Install banner will show again', 'info');
+  }
+}
+
+// Add this to your setupSettings() function, inside the settings section
+const resetBannerBtn = document.createElement('button');
+resetBannerBtn.className = 'settings-btn';
+resetBannerBtn.innerHTML = `
+  <span class="material-icons-round">refresh</span>
+  <span>Reset Install Banner</span>
+`;
+resetBannerBtn.addEventListener('click', resetInstallBanner);
+
+// Add it to the settings modal after the support section
+const settingsBody = document.querySelector('#settings-modal .modal-body');
+if (settingsBody) {
+  const supportSection = settingsBody.querySelector('.settings-section:has(#report-problem-btn)');
+  if (supportSection && supportSection.parentNode) {
+    const newSection = document.createElement('div');
+    newSection.className = 'settings-section';
+    newSection.appendChild(resetBannerBtn);
+    supportSection.parentNode.insertBefore(newSection, supportSection.nextSibling);
+  }
+}
+
 window.isDataSaverEnabled = getDataSaver;
