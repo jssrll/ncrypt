@@ -10,7 +10,6 @@ const PREF_DATA_SAVER = 'ncrypt_data_saver';
 function initSettings() {
   console.log('[Settings] Initializing...');
   
-  // Wait for DOM
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupSettings);
   } else {
@@ -41,9 +40,6 @@ function setupSettings() {
   if (darkModeToggle) {
     darkModeToggle.checked = getDarkMode();
     darkModeToggle.addEventListener('change', (e) => setDarkMode(e.target.checked));
-    console.log('[Settings] Dark mode toggle ready');
-  } else {
-    console.warn('[Settings] #dark-mode-toggle not found');
   }
 
   // High contrast toggle
@@ -75,7 +71,52 @@ function setupSettings() {
 
   // Apply saved preferences
   applyAllPreferences();
+  
+  // Add install button to settings if app is not installed
+  addInstallToSettings();
+  
   console.log('[Settings] Initialization complete');
+}
+
+function addInstallToSettings() {
+  // Don't add if already installed
+  if (typeof window.isAppInstalled === 'function' && window.isAppInstalled()) {
+    return;
+  }
+  
+  // Find where to insert the install button
+  const settingsBody = document.querySelector('#settings-modal .modal-body');
+  if (!settingsBody) return;
+  
+  // Check if install button already exists
+  if (document.getElementById('install-app-section')) return;
+  
+  // Create install section
+  const installSection = document.createElement('div');
+  installSection.id = 'install-app-section';
+  installSection.className = 'settings-section';
+  installSection.innerHTML = `
+    <h3 class="settings-section-title">Install App</h3>
+    <button class="settings-btn" id="install-app-btn">
+      <span class="material-icons-round">get_app</span>
+      <span>Install ncrypt</span>
+    </button>
+    <p class="settings-hint">Install for a full app experience with offline support</p>
+  `;
+  
+  // Insert at the top of settings (after any existing sections)
+  const firstSection = settingsBody.querySelector('.settings-section');
+  if (firstSection) {
+    settingsBody.insertBefore(installSection, firstSection);
+  } else {
+    settingsBody.prepend(installSection);
+  }
+  
+  // Add click handler
+  const installBtn = document.getElementById('install-app-btn');
+  if (installBtn && typeof window.triggerInstall === 'function') {
+    installBtn.addEventListener('click', window.triggerInstall);
+  }
 }
 
 function openSettingsModal() {
@@ -91,6 +132,12 @@ function openSettingsModal() {
   
   const fontSizeSelect = document.getElementById('font-size-select');
   if (fontSizeSelect) fontSizeSelect.value = getFontSize();
+  
+  // Refresh install button visibility
+  if (typeof window.isAppInstalled === 'function' && window.isAppInstalled()) {
+    const installSection = document.getElementById('install-app-section');
+    if (installSection) installSection.style.display = 'none';
+  }
   
   openModal('settings-modal');
 }
@@ -158,37 +205,6 @@ function reportProblem() {
   );
   window.location.href = `mailto:support@ncrypt.app?subject=${subject}&body=${body}`;
   toast('Opening email client...', 'info');
-}
-
-// Add this to the settings section in settings.js
-
-// Add this function
-function resetInstallBanner() {
-  if (typeof window.resetInstallBanner === 'function') {
-    window.resetInstallBanner();
-    toast('Install banner will show again', 'info');
-  }
-}
-
-// Add this to your setupSettings() function, inside the settings section
-const resetBannerBtn = document.createElement('button');
-resetBannerBtn.className = 'settings-btn';
-resetBannerBtn.innerHTML = `
-  <span class="material-icons-round">refresh</span>
-  <span>Reset Install Banner</span>
-`;
-resetBannerBtn.addEventListener('click', resetInstallBanner);
-
-// Add it to the settings modal after the support section
-const settingsBody = document.querySelector('#settings-modal .modal-body');
-if (settingsBody) {
-  const supportSection = settingsBody.querySelector('.settings-section:has(#report-problem-btn)');
-  if (supportSection && supportSection.parentNode) {
-    const newSection = document.createElement('div');
-    newSection.className = 'settings-section';
-    newSection.appendChild(resetBannerBtn);
-    supportSection.parentNode.insertBefore(newSection, supportSection.nextSibling);
-  }
 }
 
 window.isDataSaverEnabled = getDataSaver;
