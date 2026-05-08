@@ -91,16 +91,19 @@ async function getMessages(conversationId) {
 }
 
 // Send a message
-async function sendMessage(conversationId, content) {
+async function sendMessage(conversationId, content, replyTo = null) {
   if (!currentUser) return { success: false };
   
   try {
-    const result = await callAPI({
+    const payload = {
       action: 'sendMessage',
       conversationId,
       senderId: currentUser.id,
       content: content.trim()
-    });
+    };
+    if (replyTo) payload.replyTo = JSON.stringify(replyTo);
+    
+    const result = await callAPI(payload);
     return result;
   } catch (err) {
     console.error('Send message error:', err);
@@ -153,5 +156,20 @@ async function uploadFile(fileName, mimeType, fileData) {
   } catch (err) {
     console.error('Upload file error:', err);
     return { success: false, message: 'Upload failed' };
+  }
+}
+
+// Update message reactions
+async function updateMessageReactions(messageId, reactions) {
+  try {
+    const result = await callAPI({
+      action: 'updateMessageReactions',
+      messageId,
+      reactions: JSON.stringify(reactions)
+    });
+    return result;
+  } catch (err) {
+    console.error('Update reactions error:', err);
+    return { success: false };
   }
 }

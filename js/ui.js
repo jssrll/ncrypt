@@ -14,30 +14,23 @@ function closeModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
   modal.classList.add('hidden');
-  // Only restore scroll if no other modals are open
   const anyOpen = document.querySelectorAll('.modal:not(.hidden)');
   if (!anyOpen.length) document.body.style.overflow = '';
 }
 
-// Wire up all modal close buttons (data-modal attribute or generic .modal-close)
+// Wire up all modal close buttons
 function initModals() {
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => {
-      // Close parent modal
       const modal = btn.closest('.modal');
-      if (modal) {
-        closeModal(modal.id);
-      }
+      if (modal) closeModal(modal.id);
     });
   });
 
-  // Close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', () => {
       const modal = overlay.closest('.modal');
-      if (modal) {
-        closeModal(modal.id);
-      }
+      if (modal) closeModal(modal.id);
     });
   });
 }
@@ -57,7 +50,7 @@ function fadeOutLoader() {
   setTimeout(() => loader.classList.add('hidden'), 420);
 }
 
-// ── VH fix for mobile browsers (address bar changes) ─────────
+// ── VH fix for mobile browsers ────────────────────────────────
 function setVH() {
   const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);

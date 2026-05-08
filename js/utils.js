@@ -14,7 +14,7 @@ function getInitials(name) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-// Format date
+// Format date for conversation list
 function formatDate(isoString) {
   if (!isoString) return '—';
   try {
@@ -36,7 +36,7 @@ function formatDate(isoString) {
   }
 }
 
-// Format message time
+// Format message time (HH:MM AM/PM)
 function formatMessageTime(isoString) {
   if (!isoString) return '';
   try {
@@ -65,7 +65,7 @@ function setBtnLoading(btn, loading, originalText = '') {
 }
 
 // Toast notification
-function toast(message, type = 'info') {
+function toast(message, type = 'info', duration = 3800) {
   const icons = { success: 'check_circle', error: 'error', info: 'info' };
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -76,7 +76,7 @@ function toast(message, type = 'info') {
   setTimeout(() => {
     el.classList.add('out');
     setTimeout(() => el.remove(), 350);
-  }, 3800);
+  }, duration);
 }
 
 // Generate unique ID

@@ -17,7 +17,7 @@ function initializeMessenger() {
   initLongPressMenu();
 }
 
-// ── File content parser (unchanged) ────────────────────────────
+// ── File content parser ────────────────────────────
 function parseFileContent(content) {
   if (!content || content[0] !== '{') return null;
   try {
@@ -27,8 +27,28 @@ function parseFileContent(content) {
   return null;
 }
 
-function getDriveFileIdFromMsg(url) { /* unchanged */ }
-function resolveDisplayUrl(driveUrl, type) { /* unchanged */ }
+function getDriveFileIdFromMsg(url) {
+  if (!url) return null;
+  let m = url.match(/\/file\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return m[1];
+  m = url.match(/\/d\/([^/?#]+)/);
+  if (m) return m[1];
+  return null;
+}
+
+function resolveDisplayUrl(driveUrl, type) {
+  const fileId = getDriveFileIdFromMsg(driveUrl);
+  if (!fileId) return driveUrl;
+  if (type === 'image') {
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  if (type === 'video' || type === 'audio') {
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
 
 function enhanceMessage(msg) {
   if (msg._enhanced) return msg;
@@ -47,23 +67,76 @@ function enhanceMessage(msg) {
       msg.type = 'text';
     }
   }
-  // Parse reactions and reply from extended fields (if present in backend)
   if (msg.reactions) {
-    try { msg.reactions = JSON.parse(msg.reactions); } catch(e) {}
+    try { msg.reactions = JSON.parse(msg.reactions); } catch(e) { msg.reactions = {}; }
   }
   if (msg.replyTo) {
-    try { msg.replyTo = JSON.parse(msg.replyTo); } catch(e) {}
+    try { msg.replyTo = JSON.parse(msg.replyTo); } catch(e) { msg.replyTo = null; }
   }
   msg._enhanced = true;
   return msg;
 }
 
-// ── Conversations (unchanged) ──────────────────────────────────
-async function loadConversations() { /* unchanged */ }
+// ── Conversations ──────────────────────────────────
+async function loadConversations() {
+  if (!currentUser) return;
+  
+  const result = await getConversations();
+  if (result.success) {
+    conversations = result.conversations || [];
+    renderConversationsList();
+  }
+}
 
-function renderConversationsList() { /* unchanged */ }
+function renderConversationsList() {
+  const container = document.getElementById('conversations-list');
+  if (!container) return;
+  
+  if (!conversations.length) {
+    container.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+        <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px;">chat_bubble_outline</span>
+        <p>No conversations yet</p>
+        <p style="font-size: 13px; margin-top: 8px;">Search for users to start messaging</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const fragment = document.createDocumentFragment();
+  conversations.forEach(conv => {
+    const otherUser = conv.otherUser || {};
+    const lastMsg = conv.lastMessage || {};
+    const isActive = activeConversation?.conversationId === conv.conversationId;
+    
+    const div = document.createElement('div');
+    div.className = `conversation-item ${isActive ? 'active' : ''}`;
+    div.setAttribute('data-conv-id', conv.conversationId);
+    
+    let lastMsgContent = lastMsg.content || 'No messages yet';
+    if (lastMsgContent.length > 50) lastMsgContent = lastMsgContent.substring(0, 47) + '...';
+    
+    div.innerHTML = `
+      <div class="conv-avatar">${getInitials(otherUser.name || '?')}</div>
+      <div class="conv-info">
+        <div class="conv-name">${escapeHtml(otherUser.name || 'Unknown')}</div>
+        <div class="conv-last-message">${escapeHtml(lastMsgContent)}</div>
+      </div>
+      <div class="conv-meta">
+        <div class="conv-time">${formatDate(lastMsg.timestamp)}</div>
+        ${conv.unreadCount ? `<div class="conv-unread">${conv.unreadCount}</div>` : ''}
+      </div>
+    `;
+    
+    div.addEventListener('click', () => openConversation(conv));
+    fragment.appendChild(div);
+  });
+  
+  container.innerHTML = '';
+  container.appendChild(fragment);
+}
 
-// ── Active status ──────────────────────────────────────────────
+// ── Active status ─────────────────────────────────
 function getLastMessageTimeFromUser(userId) {
   let latest = 0;
   for (const messages of messagesCache.values()) {
@@ -89,7 +162,7 @@ function updateActiveStatus(conversation) {
   }
 }
 
-// ── Open conversation (optimized) ───────────────────────────────
+// ── Open conversation ─────────────────────────────
 async function openConversation(conversation) {
   activeConversation = conversation;
   document.getElementById('chat-screen').classList.remove('hidden');
@@ -111,12 +184,11 @@ async function openConversation(conversation) {
       </div>`;
   }
 
-  loadMessages(conversation.conversationId).then(() => {
-    if (activeConversation?.conversationId === conversation.conversationId) {
-      renderMessages(conversation.conversationId);
-      scrollToBottom();
-    }
-  });
+  await loadMessages(conversation.conversationId);
+  if (activeConversation?.conversationId === conversation.conversationId) {
+    renderMessages(conversation.conversationId);
+    scrollToBottom();
+  }
 
   document.getElementById('message-input').focus();
   clearReplyBar();
@@ -132,7 +204,7 @@ async function loadMessages(conversationId) {
   return [];
 }
 
-// ── Render messages (with reply preview & reactions) ────────────
+// ── Render messages ───────────────────────────────
 function renderMessages(conversationId) {
   const container = document.getElementById('messages-container');
   const messages = messagesCache.get(conversationId) || [];
@@ -169,17 +241,13 @@ function renderMessages(conversationId) {
     // Reply preview
     let replyPreviewHtml = '';
     if (msg.replyTo) {
-      const repliedMsg = messages.find(m => m.id === msg.replyTo.id);
-      if (repliedMsg) {
-        const replySenderName = repliedMsg.senderId === currentUser.id ? 'You' : (activeConversation?.otherUser?.name?.split(' ')[0] || 'User');
-        replyPreviewHtml = `
-          <div class="reply-preview">
-            <span class="reply-line"></span>
-            <span class="reply-sender">${escapeHtml(replySenderName)}</span>
-            <span class="reply-text">${escapeHtml(repliedMsg.content?.substring(0, 50) || 'Attachment')}</span>
-          </div>
-        `;
-      }
+      replyPreviewHtml = `
+        <div class="reply-preview">
+          <span class="reply-line"></span>
+          <span class="reply-sender">${escapeHtml(msg.replyTo.senderName || 'User')}</span>
+          <span class="reply-text">${escapeHtml(msg.replyTo.content?.substring(0, 50) || 'Attachment')}</span>
+        </div>
+      `;
     }
 
     // Reactions
@@ -197,9 +265,7 @@ function renderMessages(conversationId) {
     if (msgType === 'image') {
       contentHtml = `<a href="${escapeHtml(driveUrl)}" target="_blank"><img src="${escapeHtml(displayUrl)}" alt="${escapeHtml(fileName)}" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:4px;" loading="lazy"></a>`;
     } else if (msgType === 'video') {
-      const fileId = getDriveFileIdFromMsg(driveUrl);
-      const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
-      contentHtml = `<div>${previewUrl ? `<iframe src="${escapeHtml(previewUrl)}" width="220" height="160" style="border:none;border-radius:8px;"></iframe>` : ''}<a href="${escapeHtml(driveUrl)}" target="_blank" style="font-size:12px;color:var(--accent);">▶ Open video</a></div>`;
+      contentHtml = `<div><a href="${escapeHtml(driveUrl)}" target="_blank" style="font-size:12px;color:var(--accent);">▶ Open video</a></div>`;
     } else if (msgType === 'audio') {
       contentHtml = `<audio src="${escapeHtml(displayUrl)}" controls style="max-width:230px;"></audio><div style="font-size:11px;">🎤 ${escapeHtml(fileName)}</div>`;
     } else if (msgType === 'file') {
@@ -228,9 +294,8 @@ function renderMessages(conversationId) {
   scrollToBottom();
 }
 
-// ── Long‑press menu ──────────────────────────────────────────────
+// ── Long‑press menu ───────────────────────────────
 function initLongPressMenu() {
-  // Create context menu dynamically
   const menu = document.createElement('div');
   menu.id = 'message-context-menu';
   menu.className = 'message-context-menu hidden';
@@ -305,7 +370,6 @@ function showContextMenu(e) {
   e.preventDefault();
 }
 
-// ── Context Actions ─────────────────────────────────────────────
 function handleContextAction(action, msg) {
   switch (action) {
     case 'reply':
@@ -326,14 +390,30 @@ function setReplyToMessage(msg) {
     content: msg.content?.substring(0, 100) || 'Attachment',
     senderName: msg.senderId === currentUser.id ? 'You' : (activeConversation?.otherUser?.name?.split(' ')[0] || 'User')
   };
-  document.getElementById('reply-bar').classList.remove('hidden');
-  document.getElementById('reply-preview-text').textContent = `${replyToMessage.senderName}: ${replyToMessage.content}`;
+  let replyBar = document.getElementById('reply-bar');
+  if (!replyBar) {
+    const container = document.querySelector('.message-input-container');
+    replyBar = document.createElement('div');
+    replyBar.id = 'reply-bar';
+    replyBar.className = 'reply-bar hidden';
+    replyBar.innerHTML = `
+      <span class="material-icons-round">reply</span>
+      <div class="reply-preview-text" id="reply-preview-text"></div>
+      <span class="material-icons-round" id="cancel-reply">close</span>
+    `;
+    container?.parentNode?.insertBefore(replyBar, container);
+    document.getElementById('cancel-reply')?.addEventListener('click', clearReplyBar);
+  }
+  replyBar.classList.remove('hidden');
+  const previewText = document.getElementById('reply-preview-text');
+  if (previewText) previewText.textContent = `${replyToMessage.senderName}: ${replyToMessage.content}`;
   document.getElementById('message-input').focus();
 }
 
 function clearReplyBar() {
   replyToMessage = null;
-  document.getElementById('reply-bar').classList.add('hidden');
+  const replyBar = document.getElementById('reply-bar');
+  if (replyBar) replyBar.classList.add('hidden');
 }
 
 async function translateMessage(msg) {
@@ -352,29 +432,27 @@ async function translateMessage(msg) {
 }
 
 async function forwardMessage(msg) {
-  // Build list of other conversations
   const otherConversations = conversations.filter(c => c.conversationId !== activeConversation?.conversationId);
   if (!otherConversations.length) {
     toast('No other conversations to forward to', 'info');
     return;
   }
-  // Simple selection using prompt-like modal (you can expand to a proper picker)
-  const convNames = otherConversations.map(c => c.otherUser?.name || 'Unknown').join('\n');
-  const targetConv = prompt(`Forward to:\n${convNames}\nEnter exact name:`);
-  if (!targetConv) return;
-  const target = otherConversations.find(c => c.otherUser?.name === targetConv.trim());
-  if (!target) {
-    toast('Conversation not found', 'error');
+  const convNames = otherConversations.map((c, i) => `${i + 1}. ${c.otherUser?.name || 'Unknown'}`).join('\n');
+  const targetIndex = prompt(`Forward to:\n${convNames}\n\nEnter number (1-${otherConversations.length}):`);
+  if (!targetIndex) return;
+  const idx = parseInt(targetIndex) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= otherConversations.length) {
+    toast('Invalid selection', 'error');
     return;
   }
-  // Send a copy of the message
+  const target = otherConversations[idx];
   let contentToSend = msg.content;
-  if (msg.type !== 'text') contentToSend = `📎 Forwarded attachment`;
+  if (msg.type !== 'text') contentToSend = `📎 Forwarded: ${msg.fileName || 'Attachment'}`;
   await sendMessage(target.conversationId, contentToSend);
   toast('Message forwarded', 'success');
 }
 
-// ── Reactions ───────────────────────────────────────────────────
+// ── Reactions ─────────────────────────────────────
 function attachReactionListeners() {
   document.querySelectorAll('.reaction').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -402,11 +480,8 @@ function toggleReaction(msg, emoji) {
     msg.reactions[emoji].push(userId);
   }
   
-  // Update cache and re-render
   messagesCache.set(activeConversation.conversationId, messagesCache.get(activeConversation.conversationId));
   renderMessages(activeConversation.conversationId);
-  
-  // Send reaction update to backend (simplified: send a special message type)
   sendReactionUpdate(msg.id, msg.reactions);
 }
 
@@ -422,7 +497,7 @@ async function sendReactionUpdate(messageId, reactions) {
   }
 }
 
-// ── Send message with reply support ──────────────────────────────
+// ── Send message ──────────────────────────────────
 async function handleSendMessage() {
   const input = document.getElementById('message-input');
   const content = input.value.trim();
@@ -466,6 +541,7 @@ function addOptimisticMessage(msgData) {
   else if (msgData.type === 'audio') preview = '🎤 Voice message';
   else if (msgData.type === 'file') preview = `📎 ${msgData.fileName || 'File'}`;
   updateConversationLastMessage(activeConversation.conversationId, preview);
+  scrollToBottom();
 
   sendMessageAsync(activeConversation.conversationId, msgData.content, tempId, msgData.replyTo);
 }
@@ -475,23 +551,202 @@ async function sendMessageAsync(conversationId, content, tempId, replyTo = null)
     const payload = { action: 'sendMessage', conversationId, senderId: currentUser.id, content: content.trim() };
     if (replyTo) payload.replyTo = JSON.stringify(replyTo);
     const result = await callAPI(payload);
-    if (result.success) userLastActive.set(currentUser.id, Date.now());
-    // Update cache...
-  } catch (err) { /* ... */ }
+    
+    const messages = messagesCache.get(conversationId) || [];
+    const index = messages.findIndex(m => m.id === tempId);
+    
+    if (index !== -1) {
+      if (result.success) {
+        messages[index].pending = false;
+        messages[index].id = result.message?.id || messages[index].id;
+        messages[index].timestamp = result.message?.timestamp || messages[index].timestamp;
+      } else {
+        messages[index].failed = true;
+        messages[index].content = 'Failed to send';
+      }
+      messagesCache.set(conversationId, messages);
+      renderMessages(conversationId);
+    }
+    
+    userLastActive.set(currentUser.id, Date.now());
+    await loadConversations();
+  } catch (err) {
+    console.error('Send error:', err);
+    const messages = messagesCache.get(conversationId) || [];
+    const index = messages.findIndex(m => m.id === tempId);
+    if (index !== -1) {
+      messages[index].failed = true;
+      messages[index].content = 'Failed to send';
+      renderMessages(conversationId);
+    }
+    toast('Failed to send message', 'error');
+  }
 }
 
-// ── Other functions (unchanged) ──────────────────────────────────
-function getDateLabel(timestamp) { /* unchanged */ }
-function updateConversationLastMessage(convId, content) { /* unchanged */ }
-async function handleUserSearch(query) { /* unchanged */ }
-async function startConversationWithUser(userId) { /* unchanged */ }
-function closeChat() { /* unchanged */ }
-function scrollToBottom() { /* unchanged */ }
-function escapeHtml(text) { /* unchanged */ }
-function openContactInfo() { /* unchanged */ }
-function setupMessengerEvents() { /* unchanged */ }
-function startMessagePolling() { /* unchanged */ }
-function stopMessagePolling() { /* unchanged */ }
+// ── Polling ───────────────────────────────────────
+function startMessagePolling() {
+  if (messagePollingInterval) clearInterval(messagePollingInterval);
+  
+  messagePollingInterval = setInterval(async () => {
+    if (!currentUser) return;
+    await loadConversations();
+    
+    if (activeConversation) {
+      const oldMessages = messagesCache.get(activeConversation.conversationId) || [];
+      const newMessages = await loadMessages(activeConversation.conversationId);
+      
+      if (newMessages.length !== oldMessages.length) {
+        renderMessages(activeConversation.conversationId);
+        scrollToBottom();
+      }
+      updateActiveStatus(activeConversation);
+    }
+  }, 3000);
+}
+
+function stopMessagePolling() {
+  if (messagePollingInterval) {
+    clearInterval(messagePollingInterval);
+    messagePollingInterval = null;
+  }
+}
+
+// ── Search and conversation start ─────────────────
+async function handleUserSearch(query) {
+  const resultsContainer = document.getElementById('search-results');
+  if (!query || query.length < 2) {
+    resultsContainer.classList.add('hidden');
+    return;
+  }
+  
+  const result = await searchUsers(query);
+  if (!result.success || !result.users.length) {
+    resultsContainer.innerHTML = '<div class="no-results">No users found</div>';
+    resultsContainer.classList.remove('hidden');
+    return;
+  }
+  
+  resultsContainer.innerHTML = '';
+  result.users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'search-result-item';
+    div.innerHTML = `
+      <div class="search-result-avatar">${getInitials(user.name)}</div>
+      <div class="search-result-info">
+        <div class="search-result-name">${escapeHtml(user.name)}</div>
+        <div class="search-result-id">${escapeHtml(user.id)}</div>
+      </div>
+    `;
+    div.addEventListener('click', () => startConversationWithUser(user.id));
+    resultsContainer.appendChild(div);
+  });
+  resultsContainer.classList.remove('hidden');
+}
+
+async function startConversationWithUser(userId) {
+  const result = await getOrCreateConversation(userId);
+  if (result.success && result.conversation) {
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('user-search-input').value = '';
+    await loadConversations();
+    openConversation(result.conversation);
+  } else {
+    toast('Could not start conversation', 'error');
+  }
+}
+
+// ── UI Helpers ────────────────────────────────────
+function closeChat() {
+  activeConversation = null;
+  document.getElementById('chat-screen').classList.add('hidden');
+  document.getElementById('conversations-screen').classList.remove('hidden');
+  clearReplyBar();
+}
+
+function scrollToBottom() {
+  const container = document.getElementById('messages-container');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function getDateLabel(timestamp) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function updateConversationLastMessage(convId, content) {
+  const conversation = conversations.find(c => c.conversationId === convId);
+  if (conversation) {
+    conversation.lastMessage = { content, timestamp: new Date().toISOString() };
+    renderConversationsList();
+  }
+}
+
+function openContactInfo() {
+  if (!activeConversation?.otherUser) return;
+  const user = activeConversation.otherUser;
+  document.getElementById('contact-avatar').textContent = getInitials(user.name);
+  document.getElementById('contact-name').textContent = user.name || '—';
+  document.getElementById('contact-info-name').textContent = user.name || '—';
+  document.getElementById('contact-info-id').textContent = user.id || '—';
+  document.getElementById('contact-info-email').textContent = user.email || '—';
+  openModal('contact-modal');
+}
+
+function setupMessengerEvents() {
+  const sendBtn = document.getElementById('send-message-btn');
+  const messageInput = document.getElementById('message-input');
+  
+  if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
+  if (messageInput) {
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    });
+  }
+  
+  const backBtn = document.getElementById('back-to-conversations');
+  if (backBtn) backBtn.addEventListener('click', closeChat);
+  
+  const searchInput = document.getElementById('user-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => handleUserSearch(e.target.value), 300);
+    });
+  }
+  
+  const searchBtn = document.getElementById('search-btn');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      const query = searchInput?.value.trim();
+      if (query) handleUserSearch(query);
+    });
+  }
+  
+  const chatUserInfo = document.getElementById('chat-user-info-click');
+  if (chatUserInfo) chatUserInfo.addEventListener('click', openContactInfo);
+  
+  const chatProfileBtn = document.getElementById('chat-profile-btn');
+  if (chatProfileBtn) chatProfileBtn.addEventListener('click', openContactInfo);
+}
 
 // Exports
 window.openConversation = openConversation;
