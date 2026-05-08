@@ -1,17 +1,10 @@
 // ============================================================
-//  PWA PERSISTENT INSTALL BAR – NEVER DISMISSIBLE
+//  PWA - Dismissible Install Banner
 // ============================================================
 
 let deferredPrompt = null;
 const installBanner = document.getElementById('install-banner');
 const installBtn = document.getElementById('install-btn');
-const installText = document.querySelector('.install-text p');
-
-// Remove close button functionality entirely
-const installClose = document.getElementById('install-close');
-if (installClose) {
-  installClose.style.display = 'none'; // Hide the close button
-}
 
 function isAppInstalled() {
   return window.matchMedia('(display-mode: standalone)').matches ||
@@ -25,7 +18,15 @@ function showInstallBanner() {
     return;
   }
   
+  // Check if user dismissed it before
+  const dismissed = localStorage.getItem('ncrypt_install_dismissed');
+  if (dismissed === 'true') {
+    installBanner.classList.add('hidden');
+    return;
+  }
+  
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const installText = document.querySelector('.install-text p');
   if (installText) {
     installText.textContent = isIOS
       ? '📱 Tap Share → "Add to Home Screen"'
@@ -55,13 +56,32 @@ async function handleInstallClick() {
   if (outcome === 'accepted') {
     toast('🎉 Installing ncrypt…', 'success');
     installBanner.classList.add('hidden');
-  } else {
-    toast('Maybe later!', 'info');
-    // Banner stays visible
   }
 }
 
-// ── Event listeners ───────────────────────────────────────────
+function dismissInstallBanner() {
+  localStorage.setItem('ncrypt_install_dismissed', 'true');
+  installBanner.classList.add('hidden');
+}
+
+// Add close button to banner (update HTML if needed)
+function addDismissButton() {
+  const bannerContent = document.querySelector('.install-banner-content');
+  if (bannerContent && !document.querySelector('.install-dismiss')) {
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'install-dismiss';
+    dismissBtn.innerHTML = '<span class="material-icons-round">close</span>';
+    dismissBtn.style.background = 'none';
+    dismissBtn.style.border = 'none';
+    dismissBtn.style.cursor = 'pointer';
+    dismissBtn.style.padding = '8px';
+    dismissBtn.style.color = 'var(--text-muted)';
+    dismissBtn.addEventListener('click', dismissInstallBanner);
+    bannerContent.appendChild(dismissBtn);
+  }
+}
+
+// Event listeners
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -76,11 +96,7 @@ window.addEventListener('appinstalled', () => {
   toast('✅ ncrypt installed!', 'success');
 });
 
-// Show banner immediately on load and on every page visibility change
-window.addEventListener('load', showInstallBanner);
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) showInstallBanner();
+window.addEventListener('load', () => {
+  showInstallBanner();
+  addDismissButton();
 });
-
-// Also show on any navigation (SPA)
-window.addEventListener('popstate', showInstallBanner);

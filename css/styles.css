@@ -1435,3 +1435,26 @@ body {
 .context-menu-reactions span:hover {
   background: var(--border-light);
 }
+
+/* Dismiss button for install banner */
+.install-dismiss {
+  background: none !important;
+  border: none !important;
+  padding: 8px !important;
+  margin-left: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: background 0.1s;
+}
+
+.install-dismiss:active {
+  background: var(--border-light) !important;
+}
+
+.install-dismiss .material-icons-round {
+  font-size: 18px;
+}
